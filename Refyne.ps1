@@ -741,15 +741,15 @@ function Set-BCDTweaks {
     }
 
     PROCESS {
-        Read-CommandStatus 'bcdedit /set useplatformtick yes' "enable usage of platform ticks" 
-        Read-CommandStatus 'bcdedit /set disabledynamictick yes' "disable dynamic platform ticks" 
-        Read-CommandStatus 'bcdedit /set useplatformclock no' "disable use of platform clock-source" 
-        Read-CommandStatus 'bcdedit /set usefirmwarepcisettings no' "disable BIOS PCI device mapping" 
-        Read-CommandStatus 'bcdedit /set usephysicaldestination no' "disable physical APIC device mapping" 
-        Read-CommandStatus 'bcdedit /set MSI Default' "defaulte all devices to Messaged-signal Interrutps" 
-        Read-CommandStatus 'bcdedit /set configaccesspolicy Default' "defaulte memory mapping policy" 
-        Read-CommandStatus 'bcdedit /set x2apicpolicy Enable' "enable modern APIC policy" 
-        Read-CommandStatus 'bcdedit /set vm Yes' "disable virtualization" 
+        Read-CommandStatus 'bcdedit /set useplatformtick yes' "enable usage of platform ticks"
+        Read-CommandStatus 'bcdedit /set disabledynamictick yes' "disable dynamic platform ticks"
+        Read-CommandStatus 'bcdedit /set useplatformclock no' "disable use of platform clock-source"
+        Read-CommandStatus 'bcdedit /set usefirmwarepcisettings no' "disable BIOS PCI device mapping"
+        Read-CommandStatus 'bcdedit /set usephysicaldestination no' "disable physical APIC device mapping"
+        Read-CommandStatus 'bcdedit /set MSI Default' "defaulte all devices to Messaged-signal Interrutps"
+        Read-CommandStatus 'bcdedit /set configaccesspolicy Default' "defaulte memory mapping policy"
+        Read-CommandStatus 'bcdedit /set x2apicpolicy Enable' "enable modern APIC policy"
+        Read-CommandStatus 'bcdedit /set vm Yes' "disable virtualization"
         Read-CommandStatus 'bcdedit /set vsmlaunchtype Off' "disable Virtual Secure Mode" 
         Read-CommandStatus 'bcdedit /deletevalue uselegacyapicmode' "disable legacy APIC methods" 
         Read-CommandStatus 'bcdedit /set tscsyncpolicy Enhanced' "set TSC sync policy" 
@@ -959,7 +959,6 @@ function Set-RegistryTweaksAmd {
 
     END {
         if ($script:ErrorCount -lt 1) {
-            Start-Sleep 100
             Write-EndMenuStart
         }
         else {
