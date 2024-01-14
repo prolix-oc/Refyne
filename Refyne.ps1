@@ -38,7 +38,7 @@ function Write-TimestampedInformation {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$Output
     )
-  
+
     PROCESS {
         TRAP {
             Write-ErrorEvent $_.Exception.Message
@@ -47,13 +47,13 @@ function Write-TimestampedInformation {
         Write-Host ("[{0}] {1}" -f (Get-Date), $Output)
     }
 }
-  
+
 function Write-TimestampedWarning {
     PARAM (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$WarningMessage
     )
-  
+
     PROCESS {
         TRAP {
             Write-ErrorEvent $_.Exception.Message
@@ -62,13 +62,13 @@ function Write-TimestampedWarning {
         Write-Warning ("[{0}] {1}" -f (Get-Date), $WarningMessage)
     }
 }
-  
+
 function Write-TimestampedError {
     PARAM (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$ErrorMessage
     )
-  
+
     PROCESS {
         TRAP {
             Write-ErrorEvent $_.Exception.Message
