@@ -593,7 +593,7 @@ function Set-BCDTweaks {
     END {
         if ($script:ErrorCount -lt 1) {
             Clear-Host
-            Write-MemTweakWarning
+            Set-RegistryTweaks
         }
         else {
             Clear-Host
