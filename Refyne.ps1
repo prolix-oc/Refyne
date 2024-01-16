@@ -93,19 +93,21 @@ function Get-ComputerHardwareSpecification {
                 $script:Card = $GpuName
                 $GpuDriver = (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name DriverDate -ErrorAction SilentlyContinue)."DriverDate"
                 $VRAM = [math]::round($qwMemorySize / 1GB)
+                $CleanCPUName = ($CPU | Select-Object -Property Name -First 1).Name -replace '\(R\)',''
+                $CleanCPUName = $CleanCPUName -replace '\(TM\)',''
                 $SysProperties = [ordered]@{
-                    "CPU"                               = ($CPU | Select-Object -Property Name -First 1).Name
-                    "Current clock speed"               = ($CPU | Select-Object -Property CurrentClockSpeed -First 1).CurrentClockSpeed
-                    "Max clock speed"                   = ($CPU | Select-Object -Property MaxClockSpeed -First 1).MaxClockSpeed
-                    "Number of physical sockets"        = [int]$CPU.SocketDesignation.Count
-                    "Number of physical cores"          = [int]($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
-                    "Number of virtual cores"           = [int]($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
+                    "CPU"                               = $CleanCPUName
+                    "Current clock speed"               = "$(($CPU | Select-Object -Property CurrentClockSpeed -First 1).CurrentClockSpeed) MHz"
+                    "Max clock speed"                   = "$(($CPU | Select-Object -Property MaxClockSpeed -First 1).MaxClockSpeed) MHz"
+                    "Physical sockets"        = $CPU.SocketDesignation.Count
+                    "Physical cores"          = [int]($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
+                    "Virtual cores"           = [int]($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
                     "Hyper-Threading (HT)"              = ($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum -gt ($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
-                    "System Memory (in GB)"             = ($PhyMemory | Measure-Object -Property FormFactor -Sum).Sum
-                    "Memory layout"                     = ($PhyMemory | Measure-Object -Property FormFactor -Sum).Count 
-                    "Memory speed (Mbps/MT/s)"          = ($PhyMemory)[0].Speed
+                    "System Memory"                     = "$(($PhyMemory | Measure-Object -Property FormFactor -Sum).Sum) GB"
+                    "Memory layout"                     = "$(($PhyMemory | Measure-Object -Property FormFactor -Sum).Count)-DIMM"
+                    "Memory speed"                      = "$(($PhyMemory)[0].Speed) MT/s"
                     "GPU"                               = $GpuName
-                    "Video RAM (in GB)"                 = $VRAM
+                    "Video RAM"                         = "$VRAM GB"
                     "GPU Driver Date"                   = $GpuDriver
                 }
                 return $SysProperties
@@ -359,7 +361,7 @@ function Write-RisksWarning {
             "- You understand the risks that modifying Windows can bring, and will utilize the created restore point to revert these changes.",
             "- You are not entitled to on-demand 24/7 support, and such entitlement displayed in my social channels will result in removal of your presence.",
             "- One-on-one support requested of me after running this script will be billable at your expense.",
-            "General support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud], but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
+            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud], but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
         )
 
         Clear-Host
