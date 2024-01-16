@@ -3,6 +3,11 @@
 
 **Designed for Windows 11.**
 
+## Screenshots
+
+![Screengrab of main screen](screenshots/screen1.png)
+![Screengrab of initial disclosure](screenshots/screen2.png)
+
 ## Usage
 Right click the "Refyne.ps1" script, and select "Run with Powershell" in your context menu. This script is auto-elevating, meaning that when you run it, it will open Windows Terminal as an administrator.
 
