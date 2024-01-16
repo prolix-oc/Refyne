@@ -25,6 +25,7 @@
   - [📸 Screenshots](#-screenshots)
   - [🔧 Usage](#-usage)
   - [❓ FAQ](#-faq)
+    - [Is this script safe? 🛡️](#is-this-script-safe-️)
     - [My system broke because of your script! 😱](#my-system-broke-because-of-your-script-)
     - [Windows 11 sucks! Where's the Windows 10 tweaks? 🤔](#windows-11-sucks-wheres-the-windows-10-tweaks-)
     - [Can I run this script on a machine older than 10 years old? 🖥️](#can-i-run-this-script-on-a-machine-older-than-10-years-old-️)
@@ -51,12 +52,17 @@
 
 <!-- no toc -->
 - [❓FAQ](#-faq)
+  - [Is this script safe? 🛡️](#is-this-script-safe-️)
   - [My system broke because of your script! 😱](#my-system-broke-because-of-your-script-)
   - [Windows 11 sucks! Where's the Windows 10 tweaks? 🤔](#windows-11-sucks-wheres-the-windows-10-tweaks-)
   - [Can I run this script on a machine older than 10 years old? 🖥️](#can-i-run-this-script-on-a-machine-older-than-10-years-old-️)
   - [I had an error, where can I go to get help? 🆘](#i-had-an-error-where-can-i-go-to-get-help-)
   - [How can I contribute? 🤝](#how-can-i-contribute-)
   - [Do you take tips? 💰](#do-you-take-tips-)
+
+### Is this script safe? 🛡️
+
+Yes, this script is safe. It is designed to be as non-invasive as possible & it does not install any third-party software. If you want to see what the script does but you don't understand PowerShell, you can view the execution flow [here](docs/Refyne_Execution_Flow.md). Otherwise, you can view the source code [here](Refyne.ps1). It's all open-source.
 
 ### My system broke because of your script! 😱
 
@@ -82,10 +88,15 @@ You can file a pull request, or reach out to me to discuss any potential tweaks 
 
 Only if you're willing! I accept tips via PayPal, Stripe and Cash App. I will also force Luke to take a portion of these tips, somehow or some way.
 
----
 
 <p align="center">
   <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_Cashapp-Thanks?style=for-the-badge&logo=cashapp&color=C1C6C3&link=https%3A%2F%2Fcash.app%2F%24ProlixOCs" href="https://cash.app/$ProlixOCs">
   <img src="https://img.shields.io/badge/Tip_me_on_Stripe-Thanks?style=for-the-badge&logo=stripe&color=A6F8D3" href="https://pay.prolix.live/b/dR6cQqajD6Ghg1i8wx">
   <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_PayPal-Thanks?style=for-the-badge&logo=paypal&color=B0CDE1&link=https%3A%2F%2Fpaypal.me%2Fprolixgg" href="https://paypal.me/prolixgg">
 </p>
+
+---
+
+**<div align="center" id="footer">© 2024 Refyne. All rights reserved. <div>**
+<br>
+<div align="right"><a href="#">(Back to top)</a></div>
