@@ -668,7 +668,7 @@ function Set-Tweaks {
     }
 
     PROCESS {
-        Write-StatusLine "Iniotializing the component cleanup task... you have an hour to deinitalize this task before it runs."
+        Write-StatusLine Info "Initializing the component cleanup task... you have an hour to deinitalize this task before it runs."
         Read-CommandStatus "schtasks.exe /Run /TN '\Microsoft\Windows\Servicing\StartComponentCleanup'" # https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/clean-up-the-winsxs-folder?view=windows-11
 
         Write-StatusLine Info "Modifying your pagefile settings..."
