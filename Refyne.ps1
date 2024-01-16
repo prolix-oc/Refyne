@@ -22,7 +22,7 @@ $TerminalWindowWidth = [int][System.Math]::Round($Host.UI.RawUI.WindowSize.Width
 $Card = ""
 [string]$OSVersion = ((Get-CimInstance -ClassName Win32_OperatingSystem).Caption) -replace "Microsoft ", ""
 $AmdRegPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
-$AmdRegPath = "HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
+$NvRegPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 # -----------------------------------------------------------------
 # Enums
 # -----------------------------------------------------------------
@@ -47,189 +47,27 @@ enum Severity {
 # Helper Functions
 # -----------------------------------------------------------------
 
-function Search-Registry {
-    [CmdletBinding(DefaultParameterSetName = 'ByWildCard')]
-    PARAM (
-        [Parameter(ValueFromPipeline = $true, Mandatory = $false, Position = 0)]
-        [string[]]$ComputerName = $env:COMPUTERNAME,
+Function Convert-RegistryPath {
 
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByRegex')]
-        [string]$RegexPattern,
-
-        [Parameter(Mandatory = $false, ParameterSetName = 'ByWildCard')]
-        [string]$Pattern,
-
-        [Parameter(Mandatory = $false)]
-        [ValidateSet('HKEY_CLASSES_ROOT','HKEY_CURRENT_CONFIG','HKEY_CURRENT_USER','HKEY_DYN_DATA','HKEY_LOCAL_MACHINE',
-                     'HKEY_PERFORMANCE_DATA','HKEY_USERS','HKCR','HKCC','HKCU','HKDD','HKLM','HKPD','HKU')]
-        [string]$Hive,
-
-        [string]$KeyPath,
-        [int32] $MaximumResults = [int32]::MaxValue,
-        [switch]$SearchKeyName,
-        [switch]$SearchPropertyName,
-        [switch]$SearchPropertyValue,
-        [switch]$Recurse
+    [CmdLetBinding()]
+    Param(
+        [Parameter(ValueFromPipeline=$true, Mandatory=$true)]
+        [Alias("FullName")]
+        [string]$path,
+        $Encoding = "utf8"
     )
-    BEGIN {
-        [bool]$isPipeLine = $MyInvocation.ExpectingInput
 
-        if ([string]::IsNullOrWhiteSpace($ComputerName) -or $ComputerName -eq '.') { $ComputerName = $env:COMPUTERNAME }
-
-        if ($KeyPath -match '^(HK(?:CR|CU|LM|U|PD|CC|DD)|HKEY_[A-Z_]+)[:\\]?') {
-            $Hive = $matches[1]
-            $KeyPath = $KeyPath.Split("\", 2)[1]
-        }
-        switch($Hive) {
-            { @('HKCC', 'HKEY_CURRENT_CONFIG') -contains $_ }   { $objHive = [Microsoft.Win32.RegistryHive]::CurrentConfig;   break }
-            { @('HKCR', 'HKEY_CLASSES_ROOT') -contains $_ }     { $objHive = [Microsoft.Win32.RegistryHive]::ClassesRoot;     break }
-            { @('HKCU', 'HKEY_CURRENT_USER') -contains $_ }     { $objHive = [Microsoft.Win32.RegistryHive]::CurrentUser;     break }
-            { @('HKDD', 'HKEY_DYN_DATA') -contains $_ }         { $objHive = [Microsoft.Win32.RegistryHive]::DynData;         break }
-            { @('HKLM', 'HKEY_LOCAL_MACHINE') -contains $_ }    { $objHive = [Microsoft.Win32.RegistryHive]::LocalMachine;    break }
-            { @('HKPD', 'HKEY_PERFORMANCE_DATA') -contains $_ } { $objHive = [Microsoft.Win32.RegistryHive]::PerformanceData; break }
-            { @('HKU',  'HKEY_USERS') -contains $_ }            { $objHive = [Microsoft.Win32.RegistryHive]::Users;           break }
-        }
-        if (!$objHive) {
-            Throw "Parameter 'Hive' not specified or could not be parsed from the 'KeyPath' parameter."
-        }
-        if (-not ($SearchKeyName -or $SearchPropertyName -or $SearchPropertyValue)) {
-            Throw "You must specify at least one of these parameters: 'SearchKeyName', 'SearchPropertyName' or 'SearchPropertyValue'"
-        }
-        if ([string]::IsNullOrEmpty($RegexPattern) -and [string]::IsNullOrEmpty($Pattern)) {
-            if ($SearchKeyName) {
-                Write-Warning "Both parameters 'RegexPattern' and 'Pattern' are emtpy strings. Searching for KeyNames will not yield results."
-            }
-        }
-        switch ($objHive.ToString()) {
-            'CurrentConfig'   { $hiveShort = 'HKCC'; $hiveName = 'HKEY_CURRENT_CONFIG' }
-            'ClassesRoot'     { $hiveShort = 'HKCR'; $hiveName = 'HKEY_CLASSES_ROOT' }
-            'CurrentUser'     { $hiveShort = 'HKCU'; $hiveName = 'HKEY_CURRENT_USER' }
-            'DynData'         { $hiveShort = 'HKDD'; $hiveName = 'HKEY_DYN_DATA' }
-            'LocalMachine'    { $hiveShort = 'HKLM'; $hiveName = 'HKEY_LOCAL_MACHINE' }
-            'PerformanceData' { $hiveShort = 'HKPD'; $hiveName = 'HKEY_PERFORMANCE_DATA' }
-            'Users'           { $hiveShort = 'HKU' ; $hiveName = 'HKEY_USERS' }
-        }
-
-        if ($MaximumResults -le 0) { $MaximumResults = [int32]::MaxValue }
-        $script:resultCount = 0
-        [bool]$useRegEx = ($PSCmdlet.ParameterSetName -eq 'ByRegex')
-
-        function _RegSearch([Microsoft.Win32.RegistryKey]$objRootKey, [string]$regPath, [string]$computer) {
-            try {
-                if ([string]::IsNullOrWhiteSpace($regPath)) {
-                    $objSubKey = $objRootKey
-                }
-                else {
-                    $regPath = $regPath.TrimStart("\")
-                    $objSubKey = $objRootKey.OpenSubKey($regPath, $false)    # $false --> ReadOnly
-                }
-            }
-            catch {
-              Write-Warning ("Error opening $($objRootKey.Name)\$regPath" + "`r`n         " + $_.Exception.Message)
-              return
-            }
-            $subKeys = $objSubKey.GetSubKeyNames()
-
-            if ($SearchKeyName) {
-                foreach ($keyName in $subKeys) {
-                    if ($script:resultCount -lt $MaximumResults) {
-                        if ($useRegEx) { $isMatch = ($keyName -match $RegexPattern) } 
-                        else { $isMatch = ($keyName -like $Pattern) }
-                        if ($isMatch) {
-                            [PSCustomObject]@{
-                                'ComputerName'     = $computer
-                                'Hive'             = $objHive.ToString()
-                                'HiveName'         = $hiveName
-                                'HiveShortName'    = $hiveShort
-                                'Path'             = $objSubKey.Name
-                                'SubKey'           = "$regPath\$keyName".TrimStart("\")
-                                'ItemType'         = 'RegistryKey'
-                                'DataType'         = $null
-                                'ValueKind'        = $null
-                                'PropertyName'     = $null
-                                'PropertyValue'    = $null
-                                'PropertyValueRaw' = $null
-                            }
-                            $script:resultCount++
-                        }
-                    }
-                }
-            }
-            if ($SearchPropertyName -or $SearchPropertyValue) {
-                foreach ($name in $objSubKey.GetValueNames()) {
-                    if ($script:resultCount -lt $MaximumResults) {
-                        $data = $objSubKey.GetValue($name)
-                        $raw  = $objSubKey.GetValue($name, '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
-
-                        if ($SearchPropertyName) {
-                            if ($useRegEx) { $isMatch = ($name -match $RegexPattern) }
-                            else { $isMatch = ($name -like $Pattern) }
-
-                        }
-                        else {
-                            if ($useRegEx) { $isMatch = ($data -match $RegexPattern -or $raw -match $RegexPattern) } 
-                            else { $isMatch = ($data -like $Pattern -or $raw -like $Pattern) }
-                        }
-
-                        if ($isMatch) {
-                            $kind = $objSubKey.GetValueKind($name).ToString()
-                            switch ($kind) {
-                                'Binary'       { $dataType = 'REG_BINARY';    break }
-                                'DWord'        { $dataType = 'REG_DWORD';     break }
-                                'ExpandString' { $dataType = 'REG_EXPAND_SZ'; break }
-                                'MultiString'  { $dataType = 'REG_MULTI_SZ';  break }
-                                'QWord'        { $dataType = 'REG_QWORD';     break }
-                                'String'       { $dataType = 'REG_SZ';        break }
-                                default        { $dataType = 'REG_NONE';      break }
-                            }
-                            [PSCustomObject]@{
-                                'ComputerName'     = $computer
-                                'Hive'             = $objHive.ToString()
-                                'HiveName'         = $hiveName
-                                'HiveShortName'    = $hiveShort
-                                'Path'             = $objSubKey.Name
-                                'SubKey'           = $regPath.TrimStart("\")
-                                'ItemType'         = 'RegistryProperty'
-                                'DataType'         = $dataType
-                                'ValueKind'        = $kind
-                                'PropertyName'     = if ([string]::IsNullOrEmpty($name)) { '(Default)' } else { $name }
-                                'PropertyValue'    = $data
-                                'PropertyValueRaw' = $raw
-                            }
-                            $script:resultCount++
-                        }
-                    }
-                }
-            }
-
-            if ($Recurse) {
-                foreach ($keyName in $subKeys) {
-                    if ($script:resultCount -lt $MaximumResults) {
-                        $newPath = "$regPath\$keyName"
-                        _RegSearch $objRootKey $newPath $computer
-                    }
-                }
-            }
-
-            if (($objSubKey) -and $objSubKey.Name -ne $objRootKey.Name) { $objSubKey.Close() }
-        }
+    Begin {
     }
-    PROCESS {
-       if ($isPipeLine) { $ComputerName = @($_) }
-       $ComputerName | ForEach-Object {
-            Write-Verbose "Searching the registry on computer '$ComputerName'.."
-            try {
-                $rootKey = [Microsoft.Win32.RegistryKey]::OpenRemoteBaseKey($objHive, $_)
-                _RegSearch $rootKey $KeyPath $_
-            }
-            catch {
-                Write-Error "$($_.Exception.Message)"
-            }
-            finally {
-                if ($rootKey) { $rootKey.Close() }
-            }
+    Process {
+        $grabString = $path.ToString()
+        switch -Wildcard ($grabString) {
+        'HKEY_LOCAL_MACHINE*' { $grabString -replace("HKEY_LOCAL_MACHINE\\", "HKLM:\") }
+        'HKEY_CURRENT_USER*' { $grabString -replace("HKEY_CURRENT_USER\\", "HKCU:\") }
+        'HKEY_CLASSES_ROOT*' { $grabString -replace("HKEY_CLASSES_ROOT\\", "HKCR:\") }
+        'HKEY_CURRENT_CONFIG*' { $grabString -replace("HKEY_CURRENT_CONFIG\\", "HKCC:\") }
+        'HKEY_USERS*' { $grabString -replace("HKEY_USERS\\", "HKU:\") }
         }
-        Write-Verbose "All Done searching the registry. Found $($script:resultCount) results."
     }
 }
 
@@ -262,7 +100,7 @@ function Get-ComputerHardwareSpecification {
                     "Number of physical sockets"        = [int]$CPU.SocketDesignation.Count
                     "Number of physical cores"          = [int]($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
                     "Number of virtual cores"           = [int]($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
-                    "Hyper-Threading (HT)"       = ($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum -gt ($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
+                    "Hyper-Threading (HT)"              = ($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum -gt ($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
                     "System Memory (in GB)"             = ($PhyMemory | Measure-Object -Property FormFactor -Sum).Sum
                     "Memory layout"                     = ($PhyMemory | Measure-Object -Property FormFactor -Sum).Count 
                     "Memory speed (Mbps/MT/s)"          = ($PhyMemory)[0].Speed
@@ -553,12 +391,12 @@ function Get-UserIntent {
                         Clear-Host
                         Set-EnableSystemRecovery
                     }
-                    "MEM" {
+                    'MEM' {
                         $script:AcceptMemRisk = $true
                         Clear-Host
                         Set-BCDTweaksMem                
                     }
-                    "TWEAK" {
+                    'TWEAK' {
                         $script:AcceptTweaksRisk = $true
                         Clear-Host
                         Set-EnableSystemRecovery                
@@ -574,18 +412,13 @@ function Get-UserIntent {
             }
             'a' {
                 switch ($stage) {
-                    "recovery" {
-                        Set-BCDTweaks
-                    }
-                    "bcd" {
-                        Write-MemTweakWarning             
-                    }
-                    "memory" {
-                        Set-RegistryTweaks              
-                    }
-                    "registry" {
-                        # Do nothing
-                    }
+                    "rec" { Set-BCDTweaks }
+                    "bcd" { Write-MemTweakWarning }
+                    "mem" { Set-RegistryTweaks }
+                    "reg" {  }
+                    "gpu"{  }
+                    "net" {  }
+                    "inter" {  }
                 }
             }
             'r' {
@@ -608,6 +441,7 @@ function Read-CommandStatus {
     )
 
     PROCESS {
+        $ProgressPreference = 'SilentlyContinue'
         $null = Invoke-Expression $command
     }
 
@@ -646,9 +480,6 @@ function Write-RegistryKey {
             $cmdstring = 'New-Item -Path ''{0}''' -f $regpath
             Read-CommandStatus $cmdstring "create registry key for $regkey"
         }
-        else {
-            Write-StatusLine Info "Registry key for $regkey already exists, skipping..."
-        }
     }
 
     PROCESS {
@@ -664,16 +495,12 @@ function Write-BinaryRegistry {
         [Parameter(Mandatory = $true)]
         [string]$regkey,
         [Parameter(Mandatory = $true)]
-        [string]$proptype,
-        [Parameter(Mandatory = $true)]
         [byte[]]$regvalue
     )
-
     BEGIN {
     }
     PROCESS {
-        New-ItemProperty -LiteralPath $regpath -Name $regkey -Value $regvalue -PropertyType Binary -Force
-        Read-CommandStatus $cmdstring "set $regkey"
+        $cmdstring = New-ItemProperty -LiteralPath $regpath -Name $regkey -Value $regvalue -PropertyType Binary -Force
     }
 }
 function Remove-RegistryKey {  
@@ -717,11 +544,13 @@ function Set-EnableSystemRecovery {
     PROCESS {
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\SystemRestore" "SystemRestorePointCreationFrequency" "DWord" "0"
         Read-CommandStatus "Enable-ComputerRestore -Drive 'C:\', 'D:\', 'E:\', 'F:\', 'G:\'" "Pre-Optimization Restore Point."
+        Write-StatusLine "info" "Making a restore point for this system..."
+        Read-CommandStatus "Checkpoint-Computer -Description 'RefyneTweaks'" "created a restore point pre-Refyne"
     }
 
     END {
         if ($script:ErrorCount -lt 1) {
-
+            Clear-Host
             Set-BCDTweaks
         }
         else {
@@ -789,6 +618,7 @@ function Set-BCDTweaksMem {
 
     END {
         if ($script:ErrorCount -lt 1) {
+            Clear-Host
             Set-RegistryTweaks
         }
         else {
@@ -810,10 +640,8 @@ function Set-RegistryTweaks {
     PROCESS {
         Write-RegistryKey "HKLM:\System\ControlSet001\Control\PriorityControl" "Win32PrioritySeparation" "DWord" "42"
         Write-RegistryKey "HKLM:\System\ControlSet001\Control\PriorityControl" "EnableVirtualizationBasedSecurity" "DWord" "0"
-        Write-RegistryKey "HKLM:\System\ControlSet001\Control\DeviceGuard" "MouseDataQueueSize" "DWord" "20"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\mouclass\Parameters" "TreatAbsolutePointerAsAbsolute" "DWord" "1"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\mouhid\Parameters" "TreatAbsoluteAsRelative" "DWord" "0"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\mouhid\Parameters" "KeyboardDataQueueSize" "DWord" "20"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\kbdclass\Parameters" "Status" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" "Status" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\GpuEnergyDrv" "Start" "DWord" "2"
@@ -861,10 +689,19 @@ function Set-RegistryTweaks {
         Write-RegistryKey "HKCU:\Software\Microsoft\GameBar" "AllowAutoGameMode" "DWord" "1"
         Write-RegistryKey "HKCU:\Software\Microsoft\GameBar" "AutoGameModeEnabled" "DWord" "1"
         Remove-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace_41040327\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}" $false "" "Removed Gallery shortcut from explorer"
+        Read-CommandStatus "fsutil behavior set disable8dot3 1" "disabled 8.3 legacy file system"
+        Read-CommandStatus "fsutil behavior set disabledeletenotify 0" "forced TRIM enabled"
+        Read-CommandStatus "fsutil behavior set quotanotify 5400" "raised quota timer for quota violation notifications"
+        Read-CommandStatus "fsutil behavior set mftzone 2" "doubled master file table size"
+        Read-CommandStatus "fsutil behavior set encryptpagingfile 0" "disabled encrypted pagefile"
+        Read-CommandStatus "fsutil behavior set memoryusage 2" "increased pagefile size limit"
+        Read-CommandStatus "fsutil behavior set disablelastaccess 1" "disabled last accessed timestamp logging"
+        Read-CommandStatus "fsutil behavior set disablecompression 1" "disabled system drive compression"
     }
 
     END {
         if ($script:ErrorCount -lt 1) {
+            Clear-Host
             Read-GPUManu
         }
         else {
@@ -882,10 +719,11 @@ function Read-GPUManu {
 
     PROCESS {
         switch -regex ($script:Card.ToLower()) {
-            'nvidia' { Set-RegistryTweaksNvidia }
-            'amd' { Set-RegistryTweaksAmd }
-            Default: {}
-
+            'nvidia' {             
+                Set-RegistryTweaksNvidia }
+            'amd' { 
+                Set-RegistryTweaksAmd }
+            Default: { Set-RegistryTweaksInterrupts }
         }
     }
 }
@@ -897,15 +735,39 @@ function Set-RegistryTweaksNvidia {
 
     BEGIN {
         Write-StatusLine Info "Applying NVIDIA-focused driver tweaks to registry..."
+        $NvRegPath = (reg query "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /t REG_SZ /s /e /f "NVIDIA" | findstr "HKEY" | Select-Object -First 1)
     }
 
     PROCESS {
-        
+        foreach($regline in $NvRegPath) {
+            $line = Convert-RegistryPath $regline
+            Write-RegistryKey "$($line)" "PowerMizerEnable" "DWord" "1"
+            Write-RegistryKey "$($line)" "PowerMizerLevel" "DWord" "1"
+            Write-RegistryKey "$($line)" "PowerMizerLevelAC" "DWord" "1"
+            Write-RegistryKey "$($line)" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\Software\NVIDIA` Corporation\NvControlPanel2\Client" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\Software\NVIDIA` Corporation\Global\FTS" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\Software\NVIDIA` Corporation\Global\FTS" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\Software\NVIDIA` Corporation\Global\FTS" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\nvlddmkm\Global\NVTweak" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\nvlddmkm\FTS" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm" "PerfLevelSrc" "DWord" "8738"
+            Remove-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" $true "NvBackend" "remove NVIDIA backend services"
+            Read-CommandStatus "schtasks /change /disable /tn `"NvTmRep_CrashReport1_{B2FE1952-0186-46C3-BAEC-A80AA35AC5B8}`"" "disable crash reporting instance one"
+            Read-CommandStatus "schtasks /change /disable /tn `"NvTmRep_CrashReport2_{B2FE1952-0186-46C3-BAEC-A80AA35AC5B8}`"" "disable crash reporting instance two"
+            Read-CommandStatus "schtasks /change /disable /tn `"NvTmRep_CrashReport3_{B2FE1952-0186-46C3-BAEC-A80AA35AC5B8}`"" "disable crash reporting instance three"
+            Read-CommandStatus "schtasks /change /disable /tn `"NvTmRep_CrashReport4_{B2FE1952-0186-46C3-BAEC-A80AA35AC5B8}`"" "disable crash reporting instance four"
+        }
     }
 
     END {
         if ($script:ErrorCount -lt 1) {
-            Write-EndMenuStart
+            Clear-Host
+            Set-RegistryTweaksInterrupts
         }
         else {
             Clear-Host
@@ -920,41 +782,145 @@ function Set-RegistryTweaksAmd {
 
     BEGIN {
         Write-StatusLine Info "Applying AMD-focused driver tweaks to registry..."
+        $AmdRegPath = (reg query "HKLM\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /s /v "DriverDesc" | findstr "HKEY AMD ATI Radeon" | Select-Object -First 1)        
     }
 
     PROCESS {
-        Write-RegistryKey "$($AmdRegPath)\0000" "3to2Pulldown_NA" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "Adaptive De-interlacing" "DWord" "1"
-        Write-RegistryKey "$($AmdRegPath)\0000" "AllowRSOverlay" "String" "false"
-        Write-RegistryKey "$($AmdRegPath)\0000" "AllowSkins" "String" "false"
-        Write-RegistryKey "$($AmdRegPath)\0000" "AllowSnapshot" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "AllowSubscription" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "AutoColorDepthReduction_NA" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "DisableSAMUPowerGating" "DWord" "1"
-        Write-RegistryKey "$($AmdRegPath)\0000" "DisableUVDPowerGatingDynamic" "DWord" "1"
-        Write-RegistryKey "$($AmdRegPath)\0000" "DisableVCEPowerGating" "DWord" "1"
-        Write-RegistryKey "$($AmdRegPath)\0000" "EnableAspmL0s" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "EnableAspmL1" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "EnableUlps" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "KMD_DeLagEnabled" "DWord" "1"
-        Write-RegistryKey "$($AmdRegPath)\0000" "EnableUlps_NA" "String" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "KMD_FRTEnabled" "Dword" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "DisableDMACopy" "DWord" "1"
-        Write-RegistryKey "$($AmdRegPath)\0000" "DisableBlockWrite" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "StutterMode" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "EnableUlps" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "PP_SclkDeepSleepDisable" "DWord" "1"
-        Write-RegistryKey "$($AmdRegPath)\0000" "PP_ThermalAutoThrottlingEnable" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000" "DisableDrmdmaPowerGating" "DWord" "1"
-        Write-RegistryKey "$($AmdRegPath)\0000" "KMD_EnableComputePreemption" "DWord" "0"
-        Write-RegistryKey "$($AmdRegPath)\0000\UMD" "Main3D_DEF" "String" "1"
-        Write-BinaryRegistry "$($AmdRegPath)\0000\UMD" "Main3D" [byte] (0x32,0x00)
-        Write-BinaryRegistry "$($AmdRegPath)\0000\UMD" "ShaderCache" [byte] (0x32,0x00)
-        Write-BinaryRegistry "$($AmdRegPath)\0000\UMD" "Tessellation_OPTION" [byte] (0x32,0x00)
-        Write-BinaryRegistry "$($AmdRegPath)\0000\UMD" "Tessellation" "Binary" [byte] (0x31,0x00)
-        Write-BinaryRegistry "$($AmdRegPath)\0000\UMD" "VSyncControl" [byte](0x30,0x00)
-        Write-BinaryRegistry "$($AmdRegPath)\0000\UMD" "TFQ" [byte[]](0x32,0x00)
-        Write-RegistryKey "$($AmdRegPath)\0000\UMD" "3D_Refresh_Rate_Override_DEF" "DWord" "0"
+        foreach ($regline in $AmdRegPath) {
+            $line = Convert-RegistryPath $regline
+            Write-RegistryKey "$($line)" "3to2Pulldown_NA" "DWord" "0"
+            Write-RegistryKey "$($line)" "Adaptive De-interlacing" "DWord" "1"
+            Write-RegistryKey "$($line)" "AllowRSOverlay" "String" "false"
+            Write-RegistryKey "$($line)" "AllowSkins" "String" "false"
+            Write-RegistryKey "$($line)" "AllowSnapshot" "DWord" "0"
+            Write-RegistryKey "$($line)" "AllowSubscription" "DWord" "0"
+            Write-RegistryKey "$($line)" "AutoColorDepthReduction_NA" "DWord" "0"
+            Write-RegistryKey "$($line)" "DisableSAMUPowerGating" "DWord" "1"
+            Write-RegistryKey "$($line)" "DisableUVDPowerGatingDynamic" "DWord" "1"
+            Write-RegistryKey "$($line)" "DisableVCEPowerGating" "DWord" "1"
+            Write-RegistryKey "$($line)" "EnableAspmL0s" "DWord" "0"
+            Write-RegistryKey "$($line)" "EnableAspmL1" "DWord" "0"
+            Write-RegistryKey "$($line)" "EnableUlps" "DWord" "0"
+            Write-RegistryKey "$($line)" "KMD_DeLagEnabled" "DWord" "1"
+            Write-RegistryKey "$($line)" "EnableUlps_NA" "String" "0"
+            Write-RegistryKey "$($line)" "KMD_FRTEnabled" "Dword" "0"
+            Write-RegistryKey "$($line)" "DisableDMACopy" "DWord" "1"
+            Write-RegistryKey "$($line)" "DisableBlockWrite" "DWord" "0"
+            Write-RegistryKey "$($line)" "StutterMode" "DWord" "0"
+            Write-RegistryKey "$($line)" "EnableUlps" "DWord" "0"
+            Write-RegistryKey "$($line)" "PP_SclkDeepSleepDisable" "DWord" "1"
+            Write-RegistryKey "$($line)" "PP_ThermalAutoThrottlingEnable" "DWord" "0"
+            Write-RegistryKey "$($line)" "DisableDrmdmaPowerGating" "DWord" "1"
+            Write-RegistryKey "$($line)" "KMD_EnableComputePreemption" "DWord" "0"
+            Write-RegistryKey "$($line)\UMD" "Main3D_DEF" "String" "1"
+            Write-BinaryRegistry "$($line)\UMD" "Main3D" ([byte[]](0x32,0x00))
+            Write-BinaryRegistry "$($line)\UMD" "ShaderCache" ([byte[]](0x32,0x00))
+            Write-BinaryRegistry "$($line)\UMD" "Tessellation_OPTION" ([byte[]](0x32,0x00))
+            Write-BinaryRegistry "$($line)\UMD" "Tessellation" ([byte[]](0x31,0x00))
+            Write-BinaryRegistry "$($line)\UMD" "VSyncControl" ([byte[]](0x30,0x00))
+            Write-BinaryRegistry "$($line)\UMD" "TFQ" ([byte[]](0x32,0x00))
+            Write-RegistryKey "$($line)\UMD" "3D_Refresh_Rate_Override_DEF" "DWord" "0"
+        }
+    }
+
+    END {
+        if ($script:ErrorCount -lt 1) {
+            Clear-Host
+            Set-RegistryTweaksInterrupts
+        }
+        else {
+            Clear-Host
+            Show-DisclosureError Registry
+        }
+    }
+}
+
+function Set-RegistryTweaksInterrupts {
+    [CmdletBinding()]
+    PARAM ( ) # No parameters
+
+    BEGIN {
+        Write-StatusLine Info "Applying interrupt tweaks to registry..."
+        $gpureg = (wmic path Win32_VideoController get PNPDeviceID | findstr /l "PCI\VEN_")
+        $netreg = (wmic path Win32_NetworkAdapter get PNPDeviceID | findstr /L "VEN_")
+        $usbpwr = (wmic path Win32_USBController get PNPDeviceID | findstr /l "PCI\VEN_")
+        $storreg = (reg query "HKLM\SYSTEM\CurrentControlSet\Enum" /s /f "StorPort" | findstr "StorPort")
+        $usbpwralt = (wmic PATH Win32_PnPEntity GET DeviceID | findstr "USB\VID_")
+    }
+
+    PROCESS {
+        foreach ($line in $gpureg) {
+            $lineclean = $line.Trim()
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
+            Remove-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity Policy" $true "DevicePriority" "removed device priority flag"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity Policy" "DevicePolicy" "DWord" "4"
+            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity Policy" "AssignmentSetOverride" ([byte[]](0xc0))
+
+        }
+        foreach ($line in $netreg) {
+            $lineclean = $line.Trim()
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
+            Remove-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" $true "DevicePriority" "removed device priority flag"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" "DevicePolicy" "DWord" "4"
+            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" "AssignmentSetOverride" ([byte[]](0x30))
+        }
+        foreach ($line in $usbpwr) {
+            $lineclean = $line.Trim()
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
+            Remove-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" $true "DevicePriority" "removed device priority flag"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" "DevicePolicy" "DWord" "4"
+            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" "AssignmentSetOverride" ([byte[]](0xc0))
+        }
+        foreach ($regline in $storreg) {
+            $line = Convert-RegistryPath $regline
+            Write-RegistryKey "$($line)" "EnableIdlePowerManagement" "DWord" "0"
+        }
+        foreach ($line in $usbpwralt) {
+            $lineclean = $line.Trim()
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters" "EnhancedPowerManagementEnabled" "DWord" "0"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters" "AllowIdleIrpInD3" "DWord" "0"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters" "EnableSelectiveSuspend" "DWord" "0"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters" "DeviceSelectiveSuspended" "DWord" "0"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters" "SelectiveSuspendEnabled" "DWord" "0"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters" "SelectiveSuspendOn" "DWord" "0"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters" "D3ColdSupported" "DWord" "0"
+        }
+    }
+
+    END {
+        if ($script:ErrorCount -lt 1) {
+            Clear-Host
+            Set-NetworkTweaks
+        }
+        else {
+            Clear-Host
+            Show-DisclosureError Registry
+        }
+    }
+}
+
+function Set-NetworkTweaks {
+    [CmdletBinding()]
+    PARAM ( ) # No parameters
+
+    BEGIN {
+        Write-StatusLine Info "Applying interrupt tweaks to registry..."
+        $nics = (reg query "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" /f "1" /d /s | findstr HKEY_)
+    }
+
+    PROCESS {
+        foreach ($regline in $nics) {
+            $line = Convert-RegistryPath $regline
+            Write-RegistryKey "$($line)" "TCPNoDelay" "DWord" "1"
+            Write-RegistryKey "$($line)" "TcpAckFrequency" "DWord" "1"
+            Write-RegistryKey "$($line)" "TcpDelAckTicks" "DWord" "0"
+        }
+        Read-CommandStatus "netsh int tcp set supplemental Template=Internet CongestionProvider=bbr2" "enabled BBRv2 for general traffic"
+        Read-CommandStatus "netsh int tcp set supplemental Template=Datacenter CongestionProvider=bbr2" "enabled BBRv2 for datacenter traffic"
+        Read-CommandStatus "netsh int tcp set supplemental Template=Compat CongestionProvider=bbr2" "enabled BBRv2 for compatibility traffic"
+        Read-CommandStatus "netsh int tcp set supplemental Template=DatacenterCustom CongestionProvider=bbr2" "enabled BBRv2 for custom datacenter traffic"
+        Read-CommandStatus "netsh int tcp set supplemental Template=InternetCustom CongestionProvider=bbr2" "enabled BBRv2 for custom general traffic"
+
     }
 
     END {
