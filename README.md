@@ -62,7 +62,7 @@
 
 ### Is this script safe? 🛡️
 
-Yes, this script is safe. It is designed to be as non-invasive as possible & it does not install any third-party software. If you want to see what the script does but you don't understand PowerShell, you can view the execution flow [here](docs/Refyne_Execution_Flow.md). Otherwise, you can view the source code [here](Refyne.ps1). It's all open-source.
+Yes, this script is safe. It is designed to be as non-invasive as possible & it does not install any third-party software. If you want to see what the script does but you don't understand PowerShell, you can view the execution flow [here](docs/Refyne_Execution_Flow.md). Otherwise, you can view the source code [here](Refyne.ps1). It's all open-source. All of the changes made by this script can be found [here](docs/Refyne_Changes.md).
 
 ### My system broke because of your script! 😱
 
