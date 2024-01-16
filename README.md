@@ -4,7 +4,8 @@
 <a href="https://discord.gg/ffW3vCpGud">
   <img src="https://discord.com/api/guilds/761728802728181811/widget.png?style=banner2" alt="Click me!" />
 </a> 
-
+</div>
+<div align=center width="100%">
 <a href="https://tiktok.com/@prolix_oc">
   <img src="https://img.shields.io/badge/TikTok-Follow?style=for-the-badge&logo=tiktok&color=222222" alt="Click me!" />
 </a> 
