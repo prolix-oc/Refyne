@@ -1,4 +1,6 @@
 # Refyne - The One and Done Affair
+![Discord Banner](https://discord.com/api/guilds/761728802728181811/widget.png?style=banner2)
+
 "Refyne" is a script designed to refine your system fully for multitasking, gaming, programming, multimedia, and more.
 
 **Designed for Windows 11.**
