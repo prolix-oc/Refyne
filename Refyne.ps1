@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------
 
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process -verb RunAs wt.exe -ArgumentList "PowerShell.exe", "-NoExit", "-ExecutionPolicy Bypass", "-Command", "$($PSCommandPath)";
+    Start-Process -verb RunAs powershell.exe -ArgumentList "-NoExit", "-ExecutionPolicy Bypass", "-Command", "$($PSCommandPath)";
     exit;
 }
 
@@ -13,7 +13,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 [int]$ErrorCount = 0
 $FailedCommands = @()
-
+$CurrentVersion = "0.0.5-beta"
 [bool]$AcceptW10Risk = $false
 [bool]$AcceptMemRisk = $false
 [bool]$AcceptTweaksRisk = $false
@@ -224,7 +224,7 @@ function Show-Disclosure {
     }
 
     END {
-        [Console]::SetCursorPosition(0, $Host.UI.RawUI.BufferSize.Height - 1)
+        [Console]::SetCursorPosition(0, $Host.UI.RawUI.WindowSize.Height - 1)
         $Choice = Read-Host "$prompt"
         Get-UserIntent $Choice $scope
     }
@@ -251,7 +251,7 @@ function Show-DisclosureError {
     }
 
     END {
-        [Console]::SetCursorPosition(0, $Host.UI.RawUI.BufferSize.Height - 1)
+        [Console]::SetCursorPosition(0, $Host.UI.RawUI.WindowSize.Height - 1)
         $Choice = Read-Host "Type [a] to continue or [x] to exit script"
         Get-UserIntent -UserInput $Choice -Stage $target
     }
@@ -265,7 +265,7 @@ function Show-Prompt () {
     )
 
     BEGIN {
-        [Console]::SetCursorPosition(0, $Host.UI.RawUI.BufferSize.Height - 1)
+        [Console]::SetCursorPosition(0, $Host.UI.RawUI.WindowSize.Height - 1)
     }
 
     PROCESS {
@@ -942,7 +942,7 @@ function Write-MainMenuStart {
 
     BEGIN {
         Clear-Host
-        Write-ColorOutput -InputObject "Thank you for trusting Prolix OCs with your PC! <3" -ForegroundColor Green -BackgroundColor Black
+        Write-ColorOutput -InputObject "Thank you for trusting Prolix OCs with your PC! <3" -ForegroundColor Green
         Write-ColorOutput -InputObject "Join the Discord [https://discord.gg/ffW3vCpGud] for any help.`n" -ForegroundColor Gray 
     }
 
@@ -974,8 +974,8 @@ function Write-MainMenuStart {
 function Write-EndMenuStart {
     [CmdletBinding()]
     PARAM ( ) # No parameters
-
     BEGIN {
+        $host.ui.RawUI.WindowTitle = "Refyne $($CurrentVersion)"
         $lines = @(
             "You're all wrapped up! The latest and greatest in optimizations has been applied to your machine. Keep in mind of the following things before you go:`n",
             "- Keep an eye on your performance and notate if anything has degraded in usability or overall performance.",
@@ -986,13 +986,10 @@ function Write-EndMenuStart {
             "- One-on-one support requested of me after running this script will be billable at your expense.",
             "`nGeneral support, updates and information for this tweak can be found in Prolix OC's Discord [https://discord.gg/ffW3vCpGud], hope to see you there!"
         )
-
         Clear-Host
     }
-
     PROCESS {
         Show-Disclosure -InputObject $lines -Severity Success -Scope "END" -Prompt "Type [R] to reboot now or [N] to exit without restart [NOT RECOMMENDED]"
     }
 }
-
 Write-MainMenuStart

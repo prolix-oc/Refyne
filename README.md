@@ -17,9 +17,9 @@
 ![Screengrab of initial disclosure](screenshots/screen2.webp)
 
 ## Usage
-### 1. Right click the "Refyne.ps1" script, and select "Run with Powershell" in your context menu. 
-This script is auto-elevating, meaning that when you run it, it will open Windows Terminal as an administrator.
-### 2. Press "1" to start the optimization process.
+### 1. Download the .zip file from the latest release. 
+This script is auto-elevating, meaning that when you run it, it will open Windows Terminal as an administrator. If for some reason PowerShell gives you issues, there's an EasyStart.bat script available that'll launch it for you.
+### 2. Press "1" in the main menu to start the optimization process.
 More things will come, and it should be plainly obvious what to press if you want to use aforementioned things.
 ### 3. Agree to the terms presented by pressing Y/y. 
 There will be two disclosures that need to be answered, this is not a fire and forget solution. If you don't agree with the terms presented, sorry. If you didn't read them and want to break the terms, sorry.
