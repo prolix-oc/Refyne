@@ -43,7 +43,7 @@
 > [!NOTE]
 > This script is designed for Windows 11 only. While you can run it on Windows 10, it is not recommended.
 
-1. Run the following command in an elevated PowerShell prompt: `iwr -useb https://github.com/prolix-oc/Refyne/raw/master/Refyne.ps1 | iex`
+1. Run the following command in an elevated PowerShell prompt: `iwr -useb https://github.com/prolix-oc/Refyne/releases/latest/download/Refyne.ps1 | iex`
 2. Select the tweaks you want to apply.
 3. Agree to the terms and conditions when prompted.
 4. Reboot system when prompted.
