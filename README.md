@@ -1,12 +1,32 @@
 # <p align="center" width="100%">Refyne - The One and Done Affair for Windows 11</p>
 
-<p align="center" width="100%"><img src="https://discord.com/api/guilds/761728802728181811/widget.png?style=banner2" href="https://discord.gg/ffW3vCpGud"></img></p>
+<div align=center width="100%"> 
+<a href="https://discord.gg/ffW3vCpGud">
+  <img src="https://discord.com/api/guilds/761728802728181811/widget.png?style=banner2" alt="Click me!" />
+</a> 
 
-<p align="center" width="100%"><img alt="Static Badge" src="https://img.shields.io/badge/TikTok-Follow?style=for-the-badge&logo=tiktok&color=222222&link=https%3A%2F%2Ftiktok.com%2F%40prolix_oc" href="https://tiktok.com/@prolix_oc"> <img alt="Static Badge" src="https://img.shields.io/badge/Twitch-Follow?style=for-the-badge&logo=twitch&color=222222&link=https%3A%2F%2Ftwitch.tv%2Fprolix_gg" href="https://twitch.tv/prolix_gg"> <img alt="Static Badge" src="https://img.shields.io/badge/Formerly%20Twitter-Follow?style=for-the-badge&logo=X&color=222222&link=https%3A%2F%2Ftwitter.com%2Fprolix_gg" href="https://x.com/prolix_gg"></p>
-
-<p align="center" width="100%"><img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_Cashapp-Thanks?style=for-the-badge&logo=cashapp&color=C1C6C3&link=https%3A%2F%2Fcash.app%2F%24ProlixOCs" href="https://cash.app/$ProlixOCs"> <img src="https://img.shields.io/badge/Tip_me_on_Stripe-Thanks?style=for-the-badge&logo=stripe&color=A6F8D3" href="https://pay.prolix.live/b/dR6cQqajD6Ghg1i8wx"> <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_PayPal-Thanks?style=for-the-badge&logo=paypal&color=B0CDE1&link=https%3A%2F%2Fpaypal.me%2Fprolixgg" href="https://paypal.me/prolixgg"></p>
-
-
+<a href="https://tiktok.com/@prolix_oc">
+  <img src="https://img.shields.io/badge/TikTok-Follow?style=for-the-badge&logo=tiktok&color=222222" alt="Click me!" />
+</a> 
+<a href="https://twitch.tv/prolix_gg">
+  <img src="https://img.shields.io/badge/Twitch-Follow?style=for-the-badge&logo=twitch&color=222222" alt="Click me!" />
+</a> 
+<a href="https://x.com/prolix_gg">
+  <img src="https://img.shields.io/badge/Formerly%20Twitter-Follow?style=for-the-badge&logo=X&color=222222" alt="Click me!" />
+</a> 
+</div>
+<div align=center width="100%">  
+<a href="https://cash.app/$ProlixOCs">
+  <img src="https://img.shields.io/badge/Tip_me_on_Cashapp-Thanks?style=for-the-badge&logo=cashapp&color=C1C6C3" alt="Click me!" />
+</a> 
+<a href="https://pay.prolix.live/b/dR6cQqajD6Ghg1i8wx">
+  <img src="https://img.shields.io/badge/Tip_me_on_Stripe-Thanks?style=for-the-badge&logo=stripe&color=A6F8D3" alt="Click me!" />
+</a> 
+<a href="https://paypal.me/prolixgg">
+  <img src="https://img.shields.io/badge/Tip_me_on_PayPal-Thanks?style=for-the-badge&logo=paypal&color=B0CDE1" alt="Click me!" />
+</a> 
+</div>
+<br>
 "Refyne" is a script designed to refine your system fully for multitasking, gaming, programming, multimedia, and more.
 
 **Designed for Windows 11.**
