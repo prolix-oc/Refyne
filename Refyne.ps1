@@ -1,4 +1,8 @@
-﻿# -----------------------------------------------------------------
+﻿# https://admx.help/
+# https://learn.microsoft.com/en-us/windows-hardware/test/?view=windows-11
+
+
+# -----------------------------------------------------------------
 # Enforce Administrator Privileges
 # -----------------------------------------------------------------
 
@@ -21,8 +25,11 @@ $CurrentVersion = "0.0.5-beta"
 $TerminalWindowWidth = [int][System.Math]::Round($Host.UI.RawUI.WindowSize.Width / 2, [System.MidpointRounding]::AwayFromZero)
 $Card = ""
 [string]$OSVersion = ((Get-CimInstance -ClassName Win32_OperatingSystem).Caption) -replace "Microsoft ", ""
+[int]$WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion -like "*Windows 10*") { 10 } else { 0 }
 $AmdRegPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $NvRegPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
+$TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
+
 # -----------------------------------------------------------------
 # Enums
 # -----------------------------------------------------------------
@@ -51,7 +58,7 @@ Function Convert-RegistryPath {
 
     [CmdLetBinding()]
     Param(
-        [Parameter(ValueFromPipeline=$true, Mandatory=$true)]
+        [Parameter(ValueFromPipeline = $true, Mandatory = $true)]
         [Alias("FullName")]
         [string]$path,
         $Encoding = "utf8"
@@ -62,11 +69,11 @@ Function Convert-RegistryPath {
     Process {
         $grabString = $path.ToString()
         switch -Wildcard ($grabString) {
-        'HKEY_LOCAL_MACHINE*' { $grabString -replace("HKEY_LOCAL_MACHINE\\", "HKLM:\") }
-        'HKEY_CURRENT_USER*' { $grabString -replace("HKEY_CURRENT_USER\\", "HKCU:\") }
-        'HKEY_CLASSES_ROOT*' { $grabString -replace("HKEY_CLASSES_ROOT\\", "HKCR:\") }
-        'HKEY_CURRENT_CONFIG*' { $grabString -replace("HKEY_CURRENT_CONFIG\\", "HKCC:\") }
-        'HKEY_USERS*' { $grabString -replace("HKEY_USERS\\", "HKU:\") }
+            'HKEY_LOCAL_MACHINE*' { $grabString -replace ("HKEY_LOCAL_MACHINE\\", "HKLM:\") }
+            'HKEY_CURRENT_USER*' { $grabString -replace ("HKEY_CURRENT_USER\\", "HKCU:\") }
+            'HKEY_CLASSES_ROOT*' { $grabString -replace ("HKEY_CLASSES_ROOT\\", "HKCR:\") }
+            'HKEY_CURRENT_CONFIG*' { $grabString -replace ("HKEY_CURRENT_CONFIG\\", "HKCC:\") }
+            'HKEY_USERS*' { $grabString -replace ("HKEY_USERS\\", "HKU:\") }
         }
     }
 }
@@ -88,27 +95,49 @@ function Get-ComputerHardwareSpecification {
             try {
                 $CPU = Get-CimInstance -ClassName win32_processor
                 $PhyMemory = Get-CimInstance -ClassName win32_physicalmemory
+                $ECC = (Get-WMIObject -Class "Win32_PhysicalMemoryArray").MemoryErrorCorrection
+                $ECCType = Switch ($ECC) {
+                    0 { "Reserved" }
+                    1 { "Other" }
+                    2 { "Unknown" }
+                    3 { "None" }
+                    4 { "Parity" }
+                    5 { "Single-bit ECC" }
+                    6 { "Multi-bit ECC" }
+                    7 { "CRC" }
+                    8 { "ECC & parity" }
+                    9 { "ECC & CRC" }
+                    10 { "ECC, parity & CRC" }
+                    11 { "Reserved" }
+                    12 { "RDRAM ECC" }
+                    13 { "Reserved" }
+                    14 { "Reserved" }
+                    15 { "Reserved" }
+                }
+                $colSlots = Get-WmiObject -Class "win32_PhysicalMemoryArray" -namespace "root\CIMV2" -computerName $env:COMPUTERNAME
+                $TotalDIMMSlots = ($colSlots | Measure-Object -Property MemoryDevices -Sum).Sum
                 $qwMemorySize = (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue)."HardwareInformation.qwMemorySize"
                 $GpuName = (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name DriverDesc -ErrorAction SilentlyContinue)."DriverDesc"
                 $script:Card = $GpuName
                 $GpuDriver = (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name DriverDate -ErrorAction SilentlyContinue)."DriverDate"
                 $VRAM = [math]::round($qwMemorySize / 1GB)
-                $CleanCPUName = ($CPU | Select-Object -Property Name -First 1).Name -replace '\(R\)',''
-                $CleanCPUName = $CleanCPUName -replace '\(TM\)',''
+                $CleanCPUName = ($CPU | Select-Object -Property Name -First 1).Name -replace '\(R\)', ''
+                $CleanCPUName = $CleanCPUName -replace '\(TM\)', ''
                 $SysProperties = [ordered]@{
-                    "CPU"                               = $CleanCPUName
-                    "Current clock speed"               = "$(($CPU | Select-Object -Property CurrentClockSpeed -First 1).CurrentClockSpeed) MHz"
-                    "Max clock speed"                   = "$(($CPU | Select-Object -Property MaxClockSpeed -First 1).MaxClockSpeed) MHz"
-                    "Physical sockets"        = $CPU.SocketDesignation.Count
-                    "Physical cores"          = [int]($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
-                    "Virtual cores"           = [int]($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
-                    "Hyper-Threading (HT)"              = ($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum -gt ($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
-                    "System Memory"                     = "$(($PhyMemory | Measure-Object -Property FormFactor -Sum).Sum) GB"
-                    "Memory layout"                     = "$(($PhyMemory | Measure-Object -Property FormFactor -Sum).Count)-DIMM"
-                    "Memory speed"                      = "$(($PhyMemory)[0].Speed) MT/s"
-                    "GPU"                               = $GpuName
-                    "Video RAM"                         = "$VRAM GB"
-                    "GPU Driver Date"                   = $GpuDriver
+                    "CPU"                  = $CleanCPUName
+                    "Current clock speed"  = "$(($CPU | Select-Object -Property CurrentClockSpeed -First 1).CurrentClockSpeed) MHz"
+                    "Max clock speed"      = "$(($CPU | Select-Object -Property MaxClockSpeed -First 1).MaxClockSpeed) MHz"
+                    "Physical sockets"     = $CPU.SocketDesignation.Count
+                    "Physical cores"       = [int]($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
+                    "Virtual cores"        = [int]($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
+                    "Hyper-Threading (HT)" = ($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum -gt ($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
+                    "System Memory"        = "$TotalMemory GB"
+                    "Memory layout"        = "$TotalDIMMSlots-DIMM"
+                    "Memory speed"         = "$(($PhyMemory)[0].Speed) MT/s"
+                    "GPU"                  = $GpuName
+                    "Video RAM"            = "$VRAM GB"
+                    "GPU Driver Date"      = $GpuDriver
+                    "ECC Memory"           = $ECCType
                 }
                 return $SysProperties
             }
@@ -285,9 +314,9 @@ function Write-StatusLine {
 
     PROCESS {
         switch ($severity) {
-            Warn { Write-ColorOutput -InputObject "[WARNING] $content" -ForegroundColor Yellow}
-            Fatal { Write-ColorOutput -InputObject "[FATAL ERROR] $content" -ForegroundColor Red}
-            Success { Write-ColorOutput -InputObject "[SUCCESS] $content" -ForegroundColor Green}
+            Warn { Write-ColorOutput -InputObject "[WARNING] $content" -ForegroundColor Yellow }
+            Fatal { Write-ColorOutput -InputObject "[FATAL ERROR] $content" -ForegroundColor Red }
+            Success { Write-ColorOutput -InputObject "[SUCCESS] $content" -ForegroundColor Green }
             Info { Write-ColorOutput -InputObject "[INFO] $content" -ForegroundColor Gray }
             Default { Write-ColorOutput -ForegroundColor White }
         }
@@ -416,9 +445,9 @@ function Get-UserIntent {
                 switch ($stage) {
                     "rec" { Set-BCDTweaks }
                     "bcd" { Write-MemTweakWarning }
-                    "mem" { Set-RegistryTweaks }
+                    "mem" { Set-Tweaks }
                     "reg" {  }
-                    "gpu"{  }
+                    "gpu" {  }
                     "net" {  }
                     "inter" {  }
                 }
@@ -502,7 +531,7 @@ function Write-BinaryRegistry {
     BEGIN {
     }
     PROCESS {
-        $cmdstring = New-ItemProperty -LiteralPath $regpath -Name $regkey -Value $regvalue -PropertyType Binary -Force
+        New-ItemProperty -LiteralPath $regpath -Name $regkey -Value $regvalue -PropertyType Binary -Force
     }
 }
 function Remove-RegistryKey {  
@@ -593,7 +622,7 @@ function Set-BCDTweaks {
     END {
         if ($script:ErrorCount -lt 1) {
             Clear-Host
-            Set-RegistryTweaks
+            Set-Tweaks
         }
         else {
             Clear-Host
@@ -621,7 +650,7 @@ function Set-BCDTweaksMem {
     END {
         if ($script:ErrorCount -lt 1) {
             Clear-Host
-            Set-RegistryTweaks
+            Set-Tweaks
         }
         else {
             Clear-Host
@@ -630,16 +659,23 @@ function Set-BCDTweaksMem {
     }
 }
 
-function Set-RegistryTweaks {
+function Set-Tweaks {
     [CmdletBinding()]
     PARAM ( ) # No parameters
 
     BEGIN {
-        Write-StatusLine Info "Applying tweaks to registry..."
         $osMemory = (Get-WmiObject -Class win32_operatingsystem | Select-Object -Property TotalVisibleMemorySize).TotalVisibleMemorySize + 1024000
     }
 
     PROCESS {
+        Write-StatusLine "Iniotializing the component cleanup task... you have an hour to deinitalize this task before it runs."
+        Read-CommandStatus "schtasks.exe /Run /TN '\Microsoft\Windows\Servicing\StartComponentCleanup'" # https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/clean-up-the-winsxs-folder?view=windows-11
+
+        Write-StatusLine Info "Modifying your pagefile settings..."
+        Read-CommandStatus 'Start-Process -FilePath "cmd" -ArgumentList "/c wmic computersystem where name=`"$env:COMPUTERNAME`" set AutomaticManagedPagefile=False" -Wait' "Disable automatic pagefile management"
+        Read-CommandStatus 'Start-Process -FilePath "cmd" -ArgumentList "/c wmic pagefileset where name="C:\\pagefile.sys" set InitialSize=12000,MaximumSize=16000" -Wait' "Set pagefile size to 12-16GB"
+
+        Write-StatusLine Info "Applying tweaks to registry..."
         Write-RegistryKey "HKLM:\System\ControlSet001\Control\PriorityControl" "Win32PrioritySeparation" "DWord" "42"
         Write-RegistryKey "HKLM:\System\ControlSet001\Control\PriorityControl" "EnableVirtualizationBasedSecurity" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\mouclass\Parameters" "TreatAbsolutePointerAsAbsolute" "DWord" "1"
@@ -729,15 +765,16 @@ function Read-GPUManu {
     PROCESS {
         switch -regex ($script:Card.ToLower()) {
             'nvidia' {             
-                Set-RegistryTweaksNvidia }
+                Set-RegistryTweaksNvidia 
+            }
             'amd' { 
-                Set-RegistryTweaksAmd }
+                Set-RegistryTweaksAmd 
+            }
             Default: { Set-RegistryTweaksInterrupts }
         }
     }
 }
 
-#to be filled by Luke
 function Set-RegistryTweaksNvidia {
     [CmdletBinding()]
     PARAM ( ) # No parameters
@@ -748,7 +785,7 @@ function Set-RegistryTweaksNvidia {
     }
 
     PROCESS {
-        foreach($regline in $NvRegPath) {
+        foreach ($regline in $NvRegPath) {
             $line = Convert-RegistryPath $regline
             Write-RegistryKey "$($line)" "PowerMizerEnable" "DWord" "1"
             Write-RegistryKey "$($line)" "PowerMizerLevel" "DWord" "1"
@@ -822,12 +859,12 @@ function Set-RegistryTweaksAmd {
             Write-RegistryKey "$($line)" "DisableDrmdmaPowerGating" "DWord" "1"
             Write-RegistryKey "$($line)" "KMD_EnableComputePreemption" "DWord" "0"
             Write-RegistryKey "$($line)\UMD" "Main3D_DEF" "String" "1"
-            Write-BinaryRegistry "$($line)\UMD" "Main3D" ([byte[]](0x32,0x00))
-            Write-BinaryRegistry "$($line)\UMD" "ShaderCache" ([byte[]](0x32,0x00))
-            Write-BinaryRegistry "$($line)\UMD" "Tessellation_OPTION" ([byte[]](0x32,0x00))
-            Write-BinaryRegistry "$($line)\UMD" "Tessellation" ([byte[]](0x31,0x00))
-            Write-BinaryRegistry "$($line)\UMD" "VSyncControl" ([byte[]](0x30,0x00))
-            Write-BinaryRegistry "$($line)\UMD" "TFQ" ([byte[]](0x32,0x00))
+            Write-BinaryRegistry "$($line)\UMD" "Main3D" ([byte[]](0x32, 0x00))
+            Write-BinaryRegistry "$($line)\UMD" "ShaderCache" ([byte[]](0x32, 0x00))
+            Write-BinaryRegistry "$($line)\UMD" "Tessellation_OPTION" ([byte[]](0x32, 0x00))
+            Write-BinaryRegistry "$($line)\UMD" "Tessellation" ([byte[]](0x31, 0x00))
+            Write-BinaryRegistry "$($line)\UMD" "VSyncControl" ([byte[]](0x30, 0x00))
+            Write-BinaryRegistry "$($line)\UMD" "TFQ" ([byte[]](0x32, 0x00))
             Write-RegistryKey "$($line)\UMD" "3D_Refresh_Rate_Override_DEF" "DWord" "0"
         }
     }
@@ -914,22 +951,62 @@ function Set-NetworkTweaks {
 
     BEGIN {
         Write-StatusLine Info "Applying interrupt tweaks to registry..."
-        $nics = (reg query "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" /f "1" /d /s | findstr HKEY_)
+        $nics4 = (reg query "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" /f "1" /d /s | findstr HKEY_)
+        $nics6 = (reg query "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters\Interfaces" /f "1" /d /s | findstr HKEY_)
+        $adapterName = (Get-NetAdapter | Where-Object { $_.Status -eq 'Up' }).Name
     }
 
     PROCESS {
-        foreach ($regline in $nics) {
+        foreach ($regline in $nics4) {
             $line = Convert-RegistryPath $regline
             Write-RegistryKey "$($line)" "TCPNoDelay" "DWord" "1"
             Write-RegistryKey "$($line)" "TcpAckFrequency" "DWord" "1"
             Write-RegistryKey "$($line)" "TcpDelAckTicks" "DWord" "0"
+            Write-RegistryKey "$($line)" "TcpInitialRTT" "DWord" "300"
+            Write-RegistryKey "$($line)" "TcpMaxDupAcks" "DWord" "2" # https://techcommunity.microsoft.com/t5/networking-blog/algorithmic-improvements-boost-tcp-performance-on-the-internet/ba-p/2347061
+            Write-RegistryKey "$($line)" "SynAttackProtect" "DWord" "1" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_SynAttackProtect
+            Write-RegistryKey "$($line)" "TCPMaxConnectResponseRetransmissions" "DWord" "2" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_TcpMaxConnectResponseRetransmissions
+            Write-RegistryKey "$($line)" "TcpMaxDataRetransmissions" "DWord" "3" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_TcpMaxDataRetransmissions
+            Write-RegistryKey "$($line)" "TcpMaxHalfOpen" "DWord" "100" # TCP Hardening
+            Write-RegistryKey "$($line)" "TcpMaxHalfOpenRetried" "DWord" "80" # TCP Hardening
+            Write-RegistryKey "$($line)" "TcpMaxPortsExhausted" "DWord" "5" # TCP Hardening
+            Write-RegistryKey "$($line)" "EnableDeadGWDetect" "DWord" "0" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_EnableDeadGWDetect
+            Write-RegistryKey "$($line)" "DisableIPSourceRouting" "DWord" "1" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_DisableIPSourceRouting
         }
-        Read-CommandStatus "netsh int tcp set supplemental Template=Internet CongestionProvider=bbr2" "enabled BBRv2 for general traffic"
-        Read-CommandStatus "netsh int tcp set supplemental Template=Datacenter CongestionProvider=bbr2" "enabled BBRv2 for datacenter traffic"
-        Read-CommandStatus "netsh int tcp set supplemental Template=Compat CongestionProvider=bbr2" "enabled BBRv2 for compatibility traffic"
-        Read-CommandStatus "netsh int tcp set supplemental Template=DatacenterCustom CongestionProvider=bbr2" "enabled BBRv2 for custom datacenter traffic"
-        Read-CommandStatus "netsh int tcp set supplemental Template=InternetCustom CongestionProvider=bbr2" "enabled BBRv2 for custom general traffic"
 
+        foreach ($regline in $nics6) {
+            $line = Convert-RegistryPath $regline
+            Write-RegistryKey "$($line)" "TCPNoDelay" "DWord" "1"
+            Write-RegistryKey "$($line)" "TcpAckFrequency" "DWord" "1"
+            Write-RegistryKey "$($line)" "TcpDelAckTicks" "DWord" "0"
+            Write-RegistryKey "$($line)" "TcpInitialRTT" "DWord" "300"
+            Write-RegistryKey "$($line)" "TcpMaxDupAcks" "DWord" "2" # https://techcommunity.microsoft.com/t5/networking-blog/algorithmic-improvements-boost-tcp-performance-on-the-internet/ba-p/2347061
+            Write-RegistryKey "$($line)" "SynAttackProtect" "DWord" "1" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_SynAttackProtect
+            Write-RegistryKey "$($line)" "TCPMaxConnectResponseRetransmissions" "DWord" "2" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_TcpMaxConnectResponseRetransmissions
+            Write-RegistryKey "$($line)" "TcpMaxDataRetransmissions" "DWord" "3" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_TcpMaxDataRetransmissions
+            Write-RegistryKey "$($line)" "TcpMaxHalfOpen" "DWord" "100" # TCP Hardening
+            Write-RegistryKey "$($line)" "TcpMaxHalfOpenRetried" "DWord" "80" # TCP Hardening
+            Write-RegistryKey "$($line)" "TcpMaxPortsExhausted" "DWord" "5" # TCP Hardening
+            Write-RegistryKey "$($line)" "EnableDeadGWDetect" "DWord" "0" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_EnableDeadGWDetect
+            Write-RegistryKey "$($line)" "DisableIPSourceRouting" "DWord" "1" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_DisableIPSourceRouting      
+        }
+
+        if ($WindowsVersion -eq 11) {
+            Read-CommandStatus "netsh int tcp set supplemental Template=Internet CongestionProvider=bbr2" "Enabled BBRv2 for general traffic"
+            Read-CommandStatus "netsh int tcp set supplemental Template=Datacenter CongestionProvider=bbr2" "Enabled BBRv2 for datacenter traffic"
+            Read-CommandStatus "netsh int tcp set supplemental Template=Compat CongestionProvider=bbr2" "Enabled BBRv2 for compatibility traffic"
+            Read-CommandStatus "netsh int tcp set supplemental Template=DatacenterCustom CongestionProvider=bbr2" "Enabled BBRv2 for custom datacenter traffic"
+            Read-CommandStatus "netsh int tcp set supplemental Template=InternetCustom CongestionProvider=bbr2" "Enabled BBRv2 for custom general traffic"
+        }
+        else {
+            Read-CommandStatus "netsh int tcp set supplemental Template=Internet CongestionProvider=NewReno" "Enabled New-Reno for general traffic"
+            Read-CommandStatus "netsh int tcp set supplemental Template=Datacenter CongestionProvider=NewReno" "Enabled New-Reno for datacenter traffic"
+            Read-CommandStatus "netsh int tcp set supplemental Template=Compat CongestionProvider=NewReno" "Enabled New-Reno for compatibility traffic"
+            Read-CommandStatus "netsh int tcp set supplemental Template=DatacenterCustom CongestionProvider=NewReno" "Enabled New-Reno for custom datacenter traffic"
+            Read-CommandStatus "netsh int tcp set supplemental Template=InternetCustom CongestionProvider=NewReno" "Enabled New-Reno for custom general traffic"
+        }
+        Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses ("1.1.1.1", "1.0.0.1")
+        Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses ("2606:4700:4700::1111", "2606:4700:4700::1001")
     }
 
     END {
@@ -943,6 +1020,19 @@ function Set-NetworkTweaks {
     }
 }
 
+function Optimize-PowerShell {
+    [CmdletBinding()]
+    PARAM ( ) # No parameters
+
+    BEGIN {
+        Write-StatusLine Info "Optimizing PowerShell..."
+    }
+
+    PROCESS {
+        Read-CommandStatus { Start-Process -FilePath "powershell" -ArgumentList '-Command', "Invoke-RestMethod 'https://github.com/luke-beep/ps-optimize-assemblies/raw/main/optimize-assemblies.ps1' | Invoke-Expression" -Verb RunAs -Wait } "optimize PowerShell assemblies"    
+    }
+}
+
 function Write-MainMenuStart {
     [CmdletBinding()]
     PARAM ( ) # No parameters
@@ -950,7 +1040,7 @@ function Write-MainMenuStart {
     BEGIN {
         Clear-Host
         Write-ColorOutput -InputObject "Thank you for trusting Prolix OCs with your PC! <3" -ForegroundColor Green
-        Write-ColorOutput -InputObject "Join the Discord [https://discord.gg/ffW3vCpGud] for any help.`n" -ForegroundColor Gray 
+        Write-ColorOutput -InputObject "Join the Discord [https://discord.gg/ffW3vCpGud] for any help." -ForegroundColor Gray 
     }
 
     PROCESS {
@@ -958,13 +1048,35 @@ function Write-MainMenuStart {
 
         if ($OSVersion -like "*Windows 11*") {
             Write-ColorOutput -InputObject  "You're currently running $($OSVersion)! Nice, let's get started." -ForegroundColor Green
-            Write-ColorOutput -InputObject "`nOptions:" -ForegroundColor DarkGray
-            Write-ColorOutput -InputObject "`n[1] Run Prolix Tweaks`n" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "`nOptions:`n" -ForegroundColor DarkGray
+            Write-ColorOutput -InputObject "[1] Run Prolix Tweaks" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[2] Generate System Report" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[3] Optimize PowerShell" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[4] Activate Windows" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[5] Exit`n" -ForegroundColor Gray
 
             $Choice = Show-Prompt "Enter number choice here"
             if ($Choice -eq "1") {
                 Clear-Host
                 Write-RisksWarning
+            }
+            elseif ($Choice -eq "2") {
+                Clear-Host
+                Read-CommandStatus { Start-Process -FilePath "powershell" -ArgumentList '-Command', "Invoke-RestMethod 'https://raw.githubusercontent.com/luke-beep/GSR/main/GenerateSystemReport.ps1' | Invoke-Expression" -Verb RunAs -Wait } "generate a system report"            
+            }
+            elseif ($Choice -eq "3") {
+                Clear-Host
+                Optimize-PowerShell
+            }
+            elseif ($Choice -eq "4") {
+                Clear-Host
+                Read-CommandStatus "irm https://massgrave.dev/get | iex" "activate Windows using MAS (https://github.com/massgravel/Microsoft-Activation-Scripts) <3"
+            }
+            elseif ($Choice -eq "4") {
+                Clear-Host
+                Write-ColorOutput -InputObject "Exiting..." -ForegroundColor Green
+                Start-Sleep -Seconds 2
+                exit
             }
         }
         elseif ($OSVersion -like "*Windows 10*") {
@@ -987,6 +1099,7 @@ function Write-EndMenuStart {
             "You're all wrapped up! The latest and greatest in optimizations has been applied to your machine. Keep in mind of the following things before you go:`n",
             "- Keep an eye on your performance and notate if anything has degraded in usability or overall performance.",
             "- Taking note on any issues and submitting feedback is crucial to the development of this script.",
+            "- Utilizing Process Lasso is highly recommended to keep your system running at peak performance.",
             "- This script is free to use and distribute, but support is helpful!",
             "- You can drop by my [https://twitch.tv/prolix_gg] or come say hello on [https://tiktok.com/@prolix_oc].",
             "- You are not entitled to on-demand 24/7 support, and such entitlement displayed in my social channels will result in removal of your presence.",
@@ -996,6 +1109,7 @@ function Write-EndMenuStart {
         Clear-Host
     }
     PROCESS {
+        Start-Process "https://bitsum.com/"
         Show-Disclosure -InputObject $lines -Severity Success -Scope "END" -Prompt "Type [R] to reboot now or [N] to exit without restart [NOT RECOMMENDED]"
     }
 }
