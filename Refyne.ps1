@@ -41,15 +41,6 @@ enum Severity {
     Info
 }
 
-# enum Stage {
-#     Windows10
-#     Memory
-#     Tweak
-#     Recovery
-#     Bcd
-#     Registry
-# }
-
 # -----------------------------------------------------------------
 # Helper Functions
 # -----------------------------------------------------------------
