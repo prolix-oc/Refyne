@@ -1,10 +1,13 @@
 # <p align="center"> Refyne Main Execution Flow </p>
 
+> [!NOTE]
+> This is a control flow diagram of the main execution flow of the script. It is not a flowchart of the entire script. It is a high-level overview of the entire script. It does include all functions, variables, and enums used in the script.
+
 ```mermaid
 flowchart TD
     subgraph Main
     direction LR
-        A[Refyne] --> |Get-ComputerHardwareSpecification| B(Operating System Version)
+        A[Start] --> |Get-ComputerHardwareSpecification| B(Operating System Version)
         B --> C(Windows 11)
         B --> D(Windows 10)
         B --> F(Other)
@@ -104,3 +107,9 @@ flowchart TD
     Execution-->Error-Handling
     Choices-->Error-Handling
 ```
+
+---
+
+**<div align="center" id="footer">© 2023 Refyne. All rights reserved. <div>**
+<br>
+<div align="right"><a href="#">(Back to top)</a></div>

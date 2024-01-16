@@ -82,10 +82,15 @@ You can file a pull request, or reach out to me to discuss any potential tweaks 
 
 Only if you're willing! I accept tips via PayPal, Stripe and Cash App. I will also force Luke to take a portion of these tips, somehow or some way.
 
----
 
 <p align="center">
   <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_Cashapp-Thanks?style=for-the-badge&logo=cashapp&color=C1C6C3&link=https%3A%2F%2Fcash.app%2F%24ProlixOCs" href="https://cash.app/$ProlixOCs">
   <img src="https://img.shields.io/badge/Tip_me_on_Stripe-Thanks?style=for-the-badge&logo=stripe&color=A6F8D3" href="https://pay.prolix.live/b/dR6cQqajD6Ghg1i8wx">
   <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_PayPal-Thanks?style=for-the-badge&logo=paypal&color=B0CDE1&link=https%3A%2F%2Fpaypal.me%2Fprolixgg" href="https://paypal.me/prolixgg">
 </p>
+
+---
+
+**<div align="center" id="footer">© 2024 Refyne. All rights reserved. <div>**
+<br>
+<div align="right"><a href="#">(Back to top)</a></div>
