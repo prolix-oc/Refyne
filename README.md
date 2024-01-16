@@ -1,5 +1,8 @@
-# Refyne - The One and Done Affair
-![Discord Banner](https://discord.com/api/guilds/761728802728181811/widget.png?style=banner2)
+# <p style="text-align: center;">Refyne - The One and Done Affair for Windows 11</p>
+<p style="text-align: center;"><img alt="Static Badge" src="https://img.shields.io/badge/TikTok-Follow?style=for-the-badge&logo=tiktok&color=222222&link=https%3A%2F%2Ftiktok.com%2F%40prolix_oc"> <img alt="Static Badge" src="https://img.shields.io/badge/Twitch-Follow?style=for-the-badge&logo=twitch&color=222222&link=https%3A%2F%2Ftwitch.tv%2Fprolix_gg"> <img alt="Static Badge" src="https://img.shields.io/badge/Formerly%20Twitter-Follow?style=for-the-badge&logo=X&color=222222&link=https%3A%2F%2Ftwitter.com%2Fprolix_gg">
+ <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_Cashapp-Thanks?style=for-the-badge&logo=cashapp&color=C1C6C3&link=https%3A%2F%2Fcash.app%2F%24ProlixOCs"> <img src="https://img.shields.io/badge/Tip_me_on_Stripe-Thanks?style=for-the-badge&logo=stripe&color=A6F8D3" href="https://pay.prolix.live/b/dR6cQqajD6Ghg1i8wx"> <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_PayPal-Thanks?style=for-the-badge&logo=paypal&color=B0CDE1&link=https%3A%2F%2Fpaypal.me%2Fprolixgg"></p>
+<p style="text-align: center;"><img src="https://discord.com/api/guilds/761728802728181811/widget.png?style=banner2" href="https://discord.gg/ffW3vCpGud"></img></p>
+
 
 "Refyne" is a script designed to refine your system fully for multitasking, gaming, programming, multimedia, and more.
 
@@ -41,3 +44,6 @@ Currently, there is no support for Windows 10 until I can port my existing Windo
 
 - ### How can I contribute?
   - You can file a pull request, or reach out to me to discuss any potential tweaks you'd like to see added. I will review them with my fellow developer Luke and make the determination if it's valid. However, this script is fairly comprehensive as it is.
+
+- ### Do you take tips?
+  - Only if you're willing! I accept tips via PayPal, Stripe and Cash App. I will also force Luke to take a portion of these tips, somehow or some way.
