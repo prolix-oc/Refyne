@@ -17,7 +17,7 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 
 [int]$ErrorCount = 0
 $FailedCommands = @()
-$CurrentVersion = "0.0.5-beta"
+$CurrentVersion = "0.0.7-beta"
 [bool]$AcceptW10Risk = $false
 [bool]$AcceptMemRisk = $false
 [bool]$AcceptTweaksRisk = $false
