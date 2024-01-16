@@ -1,4 +1,6 @@
 ﻿# https://admx.help/
+# https://learn.microsoft.com/en-us/windows-hardware/test/?view=windows-11
+
 
 # -----------------------------------------------------------------
 # Enforce Administrator Privileges
@@ -26,7 +28,7 @@ $Card = ""
 [int]$WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion -like "*Windows 10*") { 10 } else { 0 }
 $AmdRegPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $NvRegPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
-$TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum /1gb
+$TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
 
 # -----------------------------------------------------------------
 # Enums
@@ -93,6 +95,27 @@ function Get-ComputerHardwareSpecification {
             try {
                 $CPU = Get-CimInstance -ClassName win32_processor
                 $PhyMemory = Get-CimInstance -ClassName win32_physicalmemory
+                $ECC = (Get-WMIObject -Class "Win32_PhysicalMemoryArray").MemoryErrorCorrection
+                $ECCType = Switch ($ECC) {
+                    0 { "Reserved" }
+                    1 { "Other" }
+                    2 { "Unknown" }
+                    3 { "None" }
+                    4 { "Parity" }
+                    5 { "Single-bit ECC" }
+                    6 { "Multi-bit ECC" }
+                    7 { "CRC" }
+                    8 { "ECC & parity" }
+                    9 { "ECC & CRC" }
+                    10 { "ECC, parity & CRC" }
+                    11 { "Reserved" }
+                    12 { "RDRAM ECC" }
+                    13 { "Reserved" }
+                    14 { "Reserved" }
+                    15 { "Reserved" }
+                }
+                $colSlots = Get-WmiObject -Class "win32_PhysicalMemoryArray" -namespace "root\CIMV2" -computerName $env:COMPUTERNAME
+                $TotalDIMMSlots = ($colSlots | Measure-Object -Property MemoryDevices -Sum).Sum
                 $qwMemorySize = (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue)."HardwareInformation.qwMemorySize"
                 $GpuName = (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name DriverDesc -ErrorAction SilentlyContinue)."DriverDesc"
                 $script:Card = $GpuName
@@ -108,12 +131,13 @@ function Get-ComputerHardwareSpecification {
                     "Physical cores"       = [int]($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
                     "Virtual cores"        = [int]($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
                     "Hyper-Threading (HT)" = ($CPU | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum -gt ($CPU | Measure-Object -Property NumberofCores -Sum).Sum 
-                    "System Memory"        = "$(($PhyMemory | Measure-Object -Property FormFactor -Sum).Sum) GB"
-                    "Memory layout"        = "$(($PhyMemory | Measure-Object -Property FormFactor -Sum).Count)-DIMM"
+                    "System Memory"        = "$TotalMemory GB"
+                    "Memory layout"        = "$TotalDIMMSlots-DIMM"
                     "Memory speed"         = "$(($PhyMemory)[0].Speed) MT/s"
                     "GPU"                  = $GpuName
                     "Video RAM"            = "$VRAM GB"
                     "GPU Driver Date"      = $GpuDriver
+                    "ECC Memory"           = $ECCType
                 }
                 return $SysProperties
             }
@@ -1005,7 +1029,7 @@ function Optimize-PowerShell {
     }
 
     PROCESS {
-        Read-CommandStatus "Start-Process -FilePath "powershell" -ArgumentList "-Command Invoke-RestMethod "https://github.com/luke-beep/ps-optimize-assemblies/raw/main/optimize-assemblies.ps1" | Invoke-Expression" -Verb RunAs" "Optimize PowerShell Assemblies"
+        Read-CommandStatus { Start-Process -FilePath "powershell" -ArgumentList '-Command', "Invoke-RestMethod 'https://github.com/luke-beep/ps-optimize-assemblies/raw/main/optimize-assemblies.ps1' | Invoke-Expression" -Verb RunAs -Wait } "optimize PowerShell assemblies"    
     }
 }
 
@@ -1016,7 +1040,7 @@ function Write-MainMenuStart {
     BEGIN {
         Clear-Host
         Write-ColorOutput -InputObject "Thank you for trusting Prolix OCs with your PC! <3" -ForegroundColor Green
-        Write-ColorOutput -InputObject "Join the Discord [https://discord.gg/ffW3vCpGud] for any help.`n" -ForegroundColor Gray 
+        Write-ColorOutput -InputObject "Join the Discord [https://discord.gg/ffW3vCpGud] for any help." -ForegroundColor Gray 
     }
 
     PROCESS {
@@ -1024,12 +1048,12 @@ function Write-MainMenuStart {
 
         if ($OSVersion -like "*Windows 11*") {
             Write-ColorOutput -InputObject  "You're currently running $($OSVersion)! Nice, let's get started." -ForegroundColor Green
-            Write-ColorOutput -InputObject "`nOptions:" -ForegroundColor DarkGray
-            Write-ColorOutput -InputObject "`n[1] Run Prolix Tweaks`n" -ForegroundColor Gray
-            Write-ColorOutput -InputObject "`n[2] Generate System Report`n" -ForegroundColor Gray
-            Write-ColorOutput -InputObject "`n[3] Optimize PowerShell`n" -ForegroundColor Gray
-            Write-ColorOutput -InputObject "`n[4] Activate Windows`n" -ForegroundColor Gray
-            Write-ColorOutput -InputObject "`n[5] Exit`n" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "`nOptions:`n" -ForegroundColor DarkGray
+            Write-ColorOutput -InputObject "[1] Run Prolix Tweaks" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[2] Generate System Report" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[3] Optimize PowerShell" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[4] Activate Windows" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[5] Exit`n" -ForegroundColor Gray
 
             $Choice = Show-Prompt "Enter number choice here"
             if ($Choice -eq "1") {
@@ -1038,7 +1062,7 @@ function Write-MainMenuStart {
             }
             elseif ($Choice -eq "2") {
                 Clear-Host
-                Read-CommandStatus "Start-Process -FilePath "powershell" -ArgumentList 'Invoke-RestMethod "https://raw.githubusercontent.com/luke-beep/GSR/main/GenerateSystemReport.ps1" | Invoke-Expression' -Verb RunAs" "Generating system report"
+                Read-CommandStatus { Start-Process -FilePath "powershell" -ArgumentList '-Command', "Invoke-RestMethod 'https://raw.githubusercontent.com/luke-beep/GSR/main/GenerateSystemReport.ps1' | Invoke-Expression" -Verb RunAs -Wait } "generate a system report"            
             }
             elseif ($Choice -eq "3") {
                 Clear-Host
@@ -1046,7 +1070,7 @@ function Write-MainMenuStart {
             }
             elseif ($Choice -eq "4") {
                 Clear-Host
-                Read-CommandStatus "irm https://massgrave.dev/get | iex" "Activating Windows using MAS (https://github.com/massgravel/Microsoft-Activation-Scripts) <3"
+                Read-CommandStatus "irm https://massgrave.dev/get | iex" "activate Windows using MAS (https://github.com/massgravel/Microsoft-Activation-Scripts) <3"
             }
             elseif ($Choice -eq "4") {
                 Clear-Host
