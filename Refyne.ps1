@@ -26,6 +26,7 @@ $Card = ""
 [int]$WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion -like "*Windows 10*") { 10 } else { 0 }
 $AmdRegPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $NvRegPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
+$TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum /1gb
 
 # -----------------------------------------------------------------
 # Enums
@@ -420,7 +421,7 @@ function Get-UserIntent {
                 switch ($stage) {
                     "rec" { Set-BCDTweaks }
                     "bcd" { Write-MemTweakWarning }
-                    "mem" { Set-RegistryTweaks }
+                    "mem" { Set-Tweaks }
                     "reg" {  }
                     "gpu" {  }
                     "net" {  }
@@ -597,7 +598,7 @@ function Set-BCDTweaks {
     END {
         if ($script:ErrorCount -lt 1) {
             Clear-Host
-            Set-RegistryTweaks
+            Set-Tweaks
         }
         else {
             Clear-Host
@@ -625,7 +626,7 @@ function Set-BCDTweaksMem {
     END {
         if ($script:ErrorCount -lt 1) {
             Clear-Host
-            Set-RegistryTweaks
+            Set-Tweaks
         }
         else {
             Clear-Host
@@ -634,16 +635,23 @@ function Set-BCDTweaksMem {
     }
 }
 
-function Set-RegistryTweaks {
+function Set-Tweaks {
     [CmdletBinding()]
     PARAM ( ) # No parameters
 
     BEGIN {
-        Write-StatusLine Info "Applying tweaks to registry..."
         $osMemory = (Get-WmiObject -Class win32_operatingsystem | Select-Object -Property TotalVisibleMemorySize).TotalVisibleMemorySize + 1024000
     }
 
     PROCESS {
+        Write-StatusLine "Iniotializing the component cleanup task... you have an hour to deinitalize this task before it runs."
+        Read-CommandStatus "schtasks.exe /Run /TN '\Microsoft\Windows\Servicing\StartComponentCleanup'" # https://learn.microsoft.com/en-us/windows-hardware/manufacture/desktop/clean-up-the-winsxs-folder?view=windows-11
+
+        Write-StatusLine Info "Modifying your pagefile settings..."
+        Read-CommandStatus 'Start-Process -FilePath "cmd" -ArgumentList "/c wmic computersystem where name=`"$env:COMPUTERNAME`" set AutomaticManagedPagefile=False" -Wait' "Disable automatic pagefile management"
+        Read-CommandStatus 'Start-Process -FilePath "cmd" -ArgumentList "/c wmic pagefileset where name="C:\\pagefile.sys" set InitialSize=12000,MaximumSize=16000" -Wait' "Set pagefile size to 12-16GB"
+
+        Write-StatusLine Info "Applying tweaks to registry..."
         Write-RegistryKey "HKLM:\System\ControlSet001\Control\PriorityControl" "Win32PrioritySeparation" "DWord" "42"
         Write-RegistryKey "HKLM:\System\ControlSet001\Control\PriorityControl" "EnableVirtualizationBasedSecurity" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\mouclass\Parameters" "TreatAbsolutePointerAsAbsolute" "DWord" "1"
@@ -743,7 +751,6 @@ function Read-GPUManu {
     }
 }
 
-#to be filled by Luke
 function Set-RegistryTweaksNvidia {
     [CmdletBinding()]
     PARAM ( ) # No parameters
@@ -1068,6 +1075,7 @@ function Write-EndMenuStart {
             "You're all wrapped up! The latest and greatest in optimizations has been applied to your machine. Keep in mind of the following things before you go:`n",
             "- Keep an eye on your performance and notate if anything has degraded in usability or overall performance.",
             "- Taking note on any issues and submitting feedback is crucial to the development of this script.",
+            "- Utilizing Process Lasso is highly recommended to keep your system running at peak performance.",
             "- This script is free to use and distribute, but support is helpful!",
             "- You can drop by my [https://twitch.tv/prolix_gg] or come say hello on [https://tiktok.com/@prolix_oc].",
             "- You are not entitled to on-demand 24/7 support, and such entitlement displayed in my social channels will result in removal of your presence.",
@@ -1077,6 +1085,7 @@ function Write-EndMenuStart {
         Clear-Host
     }
     PROCESS {
+        Start-Process "https://bitsum.com/"
         Show-Disclosure -InputObject $lines -Severity Success -Scope "END" -Prompt "Type [R] to reboot now or [N] to exit without restart [NOT RECOMMENDED]"
     }
 }
