@@ -24,7 +24,6 @@ $CurrentVersion = "0.0.9-beta"
 
 # Acceptance Variables
 $AcceptW10Risk = $false
-$AcceptMemRisk = $false
 $AcceptTweaksRisk = $false
 
 # Shell Variables
@@ -432,11 +431,6 @@ function Get-UserIntent {
                         $script:AcceptTweaksRisk = $true
                         Clear-Host
                         Set-EnableSystemRecovery
-                    }
-                    ([Stage]::Memory) {
-                        $script:AcceptMemRisk = $true
-                        Clear-Host
-                        Set-BCDTweaksMem
                     }
                     ([Stage]::Tweak) {
                         $script:AcceptTweaksRisk = $true
