@@ -51,6 +51,20 @@
 | HKLM:\Software\Policies\Microsoft\Windows\System                                                                           | UploadUserActivities              | DWord  | 0        |
 | HKLM:\Software\Policies\Microsoft\Windows\DataCollection                                                                   | AllowTelemetry                    | DWord  | 0        |
 | HKLM:\Software\Policies\Microsoft\Windows\CloudContent                                                                     | DisableSoftLanding                | DWord  | 1        |
+| HKLM:\Software\Microsoft\Windows\CurrentVersion\Reliability                                                                | TimeStampInterval                 | DWord  | 0        |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}                 | SensorPermissionState             | DWord  | 0        |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\csrss.exe\PerfOptions                      | CpuPriorityClass                  | DWord  | 4        |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\csrss.exe\PerfOptions                      | IoPriority                        | DWord  | 3        |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile                                                | NoLazyMode                        | DWord  | 1        |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile                                                | AlwaysOn                          | DWord  | 1        |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile                                                | SystemResponsiveness              | DWord  | 0        |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games                                    | Scheduling Category               | String | High     |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games                                    | GPU Priority                      | DWord  | 8        |
+| HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games                                    | Priority                          | DWord  | 6        |
+| HKLM:\Software\Microsoft\FTH                                                                                               | Enabled                           | DWord  | 0        |
+| HKLM:\SOFTWARE\Policies\Microsoft\FVE                                                                                      | DisableExternalDMAUnderLock       | DWord  | 0        |
+| HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard                                                                      | EnableVirtualizationBasedSecurity | DWord  | 0        |
+| HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard                                                                      | HVCIMATRequired                   | DWord  | 0        |
 | HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer                                                                   | Max Cached Icons                  | String | 4096     |
 | HKLM:\Software\Microsoft\Windows\Dwm                                                                                       | OverlayTestMode                   | DWord  | 5        |
 | HKLM:\System\Maps                                                                                                          | AutoUpdateEnabled                 | DWord  | 0        |
