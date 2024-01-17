@@ -74,18 +74,19 @@
 
 ### NVIDIA
 
-| Path                                                                            | Value             | Type  | Data |
-| ------------------------------------------------------------------------------- | ----------------- | ----- | ---- |
-| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PowerMizerEnable  | DWord | 1    |
-| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PowerMizerLevel   | DWord | 1    |
-| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PowerMizerLevelAC | DWord | 1    |
-| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PerfLevelSrc      | DWord | 8738 |
-| HKLM:\Software\NVIDIA Corporation\NvControlPanel2\Client                        | PerfLevelSrc      | DWord | 8738 |
-| HKLM:\Software\NVIDIA Corporation\Global\FTS                                    | PerfLevelSrc      | DWord | 8738 |
-| HKLM:\System\CurrentControlSet\Services\nvlddmkm\Global\NVTweak                 | PerfLevelSrc      | DWord | 8738 |
-| HKLM:\System\CurrentControlSet\Services\nvlddmkm\FTS                            | PerfLevelSrc      | DWord | 8738 |
-| HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm                                | PerfLevelSrc      | DWord | 8738 |
-| HKLM:\Software\Microsoft\Windows\CurrentVersion\Run                             | NvBackend         |       |      |
+| Path                                                                            | Value                        | Type  | Data |
+| ------------------------------------------------------------------------------- | ---------------------------- | ----- | ---- |
+| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PowerMizerEnable             | DWord | 1    |
+| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PowerMizerLevel              | DWord | 1    |
+| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PowerMizerLevelAC            | DWord | 1    |
+| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PerfLevelSrc                 | DWord | 8738 |
+| HKLM:\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318} | PreferSystemMemoryContiguous | DWord | 1    |
+| HKLM:\Software\NVIDIA Corporation\NvControlPanel2\Client                        | PerfLevelSrc                 | DWord | 8738 |
+| HKLM:\Software\NVIDIA Corporation\Global\FTS                                    | PerfLevelSrc                 | DWord | 8738 |
+| HKLM:\System\CurrentControlSet\Services\nvlddmkm\Global\NVTweak                 | PerfLevelSrc                 | DWord | 8738 |
+| HKLM:\System\CurrentControlSet\Services\nvlddmkm\FTS                            | PerfLevelSrc                 | DWord | 8738 |
+| HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm                                | PerfLevelSrc                 | DWord | 8738 |
+| HKLM:\Software\Microsoft\Windows\CurrentVersion\Run                             | NvBackend                    |       |      |
 
 ### AMD
 
