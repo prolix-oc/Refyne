@@ -281,7 +281,7 @@ function Show-Disclosure {
     END {
         [Console]::SetCursorPosition(0, $Host.UI.RawUI.WindowSize.Height - 1)
         $Choice = Read-Host "$prompt"
-        Get-UserIntent $Choice $scope
+        Get-UserIntent -UserInput $Choice $scope
     }
 }
 
@@ -362,7 +362,7 @@ function Write-Windows10Warning {
             "This message isn't meant to fearmonger, but it is an inevitable reality when it comes to doing things you possibly shouldn't.",
             "`nIf you want a better chance of Refyne working properly, then I'd recommend upgrading to Windows 11 (namely the Pro for Workstations variant) and starting there.",
             "`If you choose to use the tweak anyways, and accept in the next prompt: no support will be provided. You are in uncharted territory.",
-            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud], but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
+            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud] under the support channel, but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
         )
     }
 
@@ -401,7 +401,7 @@ function Write-MemTweakWarning {
             "- Frequent file system corruption or even loss of data.",
             "`n`nI cannot advise you put this particular tweak on your system if you are unsure your RAM overclock or XMP/DOCP profile is `"NASA Stable`", or if any of the mentioned issues occur with your PC.",
             "`nIf you choose to use the tweak anyways, and accept in the next prompt: no support will be provided until we can verify your RAM is stable, whether that requires de-tuning your RAM OC, changing XMP/DOCP profiles, or reverting to stock configuration.",
-            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud], but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
+            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud] under the support channel, but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
         )
     }
 
@@ -422,7 +422,7 @@ function Write-RisksWarning {
             "- You understand the risks that modifying Windows can bring, and will utilize the created restore point to revert these changes.",
             "- You are not entitled to on-demand 24/7 support, and such entitlement displayed in my social channels will result in removal of your presence.",
             "- One-on-one support requested of me after running this script will be billable at your expense.",
-            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud], but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
+            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud] under the support channel, but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
         )
 
         Clear-Host
@@ -439,7 +439,7 @@ function Get-UserIntent {
         [ValidateSet('y', 'n', 'x', 'a', 'r')]
         [string]$UserInput,
         [Parameter(Mandatory = $true)]
-        [Stage]$Stage
+        [Stage]$ScriptStage
     )
     BEGIN {
 
@@ -447,7 +447,7 @@ function Get-UserIntent {
     PROCESS {
         switch -regex ($UserInput.ToLower()) {
             'y' { 
-                switch ($stage) {
+                switch ($ScriptStage) {
                     [Stage]::Windows10 {
                         $script:AcceptW10Risk = $true
                         $script:AcceptTweaksRisk = $true
@@ -1222,7 +1222,7 @@ function Write-MainMenuStart {
         if ($WindowsVersion -eq 11) {
             Write-ColorOutput -InputObject  "You're currently running $($OSVersion)! Nice, let's get started." -ForegroundColor Green
             Write-ColorOutput -InputObject "`nOptions:`n" -ForegroundColor DarkGray
-            if (Test-Path $RegistryBackupPath -PathType Leaf) { Write-ColorOutput -InputObject "[1] Run Prolix Tweaks                [5] Revert Changes" -ForegroundColor Gray } else { Write-ColorOutput -InputObject "[1] Run Prolix Tweaks" -ForegroundColor Gray }
+            if (Test-Path $RegistryBackupPath -PathType Leaf) { Write-ColorOutput -InputObject "[1] Run Refyne                      [5] Revert Changes" -ForegroundColor Gray } else { Write-ColorOutput -InputObject "[1] Run Refyne" -ForegroundColor Gray }
             Write-ColorOutput -InputObject "[2] Generate System Report" -ForegroundColor Gray
             Write-ColorOutput -InputObject "[3] Optimize PowerShell" -ForegroundColor Gray
             Write-ColorOutput -InputObject "[4] Activate Windows" -ForegroundColor Gray
