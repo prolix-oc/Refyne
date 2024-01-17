@@ -36,7 +36,7 @@ flowchart TD
         Accepted-Stage[Accepted] -- Windows 10 --> Set-EnableSystemRecovery
         Accepted-Stage -- Memory --> Set-BCDTweaksMem
         Accepted-Stage -- Tweak --> Set-EnableSystemRecovery
-        Continue-Stage[Continued] -- Recovery --> Set-BCDTweaks
+        Continue-Stage[Continued] -- Recovery --> Backup-BCDStorage --> Set-BCDTweaks
         Continue-Stage -- Boot Configuration Data --> Write-MemTweakWarning
         Continue-Stage -- Memory --> Set-Tweaks
     end
@@ -63,8 +63,6 @@ flowchart TD
         v4(AcceptW10Risk)
         v5(AcceptMemRisk)
         v6(AcceptTweaksRisk)
-        vv7(RegBackupCaptured)
-        vv8(BCDBackupCaptured)
         v7(TerminalWindowWidth)
         v8(Card)
         v9(OSVersion)
@@ -73,11 +71,17 @@ flowchart TD
         v12(NvRegPath)
         v13(TotalMemory)
         v14(timestamp)
-        v15(stopwatch)
+        v15(logfilepath)
+        v16(regfilepath)
+        v17(bcdfilepath)
+        v18(stopwatch)
     end
 
     subgraph Functions
     direction LR
+
+        f1[Backup-BCDStorage]
+        f1[Backup-RegistryPathKey]
         f1[Convert-RegistryPath]
         f2[Get-ComputerHardwareSpecification]
         f3[Write-ColorOutput]
@@ -91,9 +95,9 @@ flowchart TD
         f11[Write-RisksWarning]
         f12[Get-UserIntent]
         f13[Read-CommandStatus]
-        ff14[Write-LogEntry]
-        ff15[Backup-BCDStorage]
-        ff16[Backup-RegistryPathKey]
+        f14[Write-LogEntry]
+        f15[Backup-BCDStorage]
+        f16[Backup-RegistryPathKey]
         f14[Write-RegistryKey]
         f15[Write-BinaryRegistry]
         f16[Set-EnableSystemRecovery]
@@ -108,11 +112,13 @@ flowchart TD
         f25[Optimize-PowerShell]
         f26[Write-MainMenuStart]
         f27[Write-EndMenuStart]
+        f28[Undo-SystemChanges]
     end
 
     Main-->Error-Handling
     Execution-->Error-Handling
     Choices-->Error-Handling
+```
 ```
 
 ---
