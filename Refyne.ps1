@@ -34,9 +34,7 @@ $TerminalWindowWidth = [int][System.Math]::Round($Host.UI.RawUI.WindowSize.Width
 $OSVersion = ((Get-CimInstance -ClassName Win32_OperatingSystem).Caption) -replace "Microsoft ", ""
 $WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion -like "*Windows 10*") { 10 } else { 0 }
 
-# GPU
-$AMDRegistryPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
-$NVIDIARegistryPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
+# Hardware naming
 $Card = ""
 $CleanCPUName = ""
 
@@ -930,7 +928,6 @@ function Set-RegistryTweaksNVIDIA {
 function Set-RegistryTweaksAMD {
     [CmdletBinding()]
     PARAM ( ) # No parameters
-
     BEGIN {
         Write-StatusLine Info "Applying AMD-focused driver tweaks to registry..."
         $AMDRegistryPath = (reg query "HKLM\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /s /v "DriverDesc" | findstr "HKEY AMD ATI Radeon" | Select-Object -First 1)        
