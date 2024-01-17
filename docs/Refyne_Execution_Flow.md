@@ -79,8 +79,6 @@ flowchart TD
         v7[TerminalWindowWidth]
         v8[OSVersion]
         v9[WindowsVersion]
-        v10[AMDRegistryPath]
-        v11[NVIDIARegistryPath]
         v12[Card]
         v13[TotalMemory]
         v14[TimeStamp]
