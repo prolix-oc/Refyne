@@ -692,11 +692,12 @@ function Set-EnableSystemRecovery {
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\SystemRestore" "SystemRestorePointCreationFrequency" "DWord" "0"
         $targets = ""
         $fsdrives = Get-PSDrive -PSProvider FileSystem 
-        foreach($drive in $fsdrives) {
+        foreach ($drive in $fsdrives) {
             if ($drive -eq $fsdrives[-1]) {
                 $targets += "$($drive.Root)"
                 Write-StatusLine Info "Enabled restore point creation for $($drive.Root)"
-            } else {
+            }
+            else {
                 $targets += "'$($drive.Root)', "
                 Write-StatusLine Info "Enabled restore point creation for $($drive.Root)"
             }
@@ -935,12 +936,7 @@ function Set-RegistryTweaksAMD {
     }
 
     PROCESS {
-        if ($script:Card -like '*Series') { 
-            Clear-Host
-            Write-StatusLine info "No applicable tweaks available for pre-Navi/Crimson-based Radeon cards, moving on..."
-            Start-Sleep -Seconds 2
-            Set-RegistryTweaksInterrupts
-        } else {
+        if (-not ($script:Card -like '*Series')) {
             foreach ($regline in $AMDRegistryPath) {
                 $line = Convert-RegistryPath $regline
                 Write-RegistryKey "$($line)" "3to2Pulldown_NA" "DWord" "0"
@@ -975,7 +971,7 @@ function Set-RegistryTweaksAMD {
                 Write-BinaryRegistry "$($line)\UMD" "VSyncControl" ([byte[]](0x30, 0x00))
                 Write-BinaryRegistry "$($line)\UMD" "TFQ" ([byte[]](0x32, 0x00))
                 Write-RegistryKey "$($line)\UMD" "3D_Refresh_Rate_Override_DEF" "DWord" "0"
-            }
+            }   
         }
     }
 
