@@ -1,4 +1,4 @@
-﻿# https://admx.help/
+# https://admx.help/
 # https://learn.microsoft.com/en-us/windows-hardware/test/?view=windows-11
 
 
@@ -15,25 +15,42 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 # Global Variables
 # -----------------------------------------------------------------
 
-[int]$ErrorCount = 0
+# Error Handling
+$ErrorCount = 0
 $FailedCommands = @()
+
+# Script Variables
 $CurrentVersion = "0.0.7-beta"
-[bool]$AcceptW10Risk = $false
-[bool]$AcceptMemRisk = $false
-[bool]$AcceptTweaksRisk = $false
-[int]$TerminalWindowWidth = 0
+
+# Acceptance Variables
+$AcceptW10Risk = $false
+$AcceptMemRisk = $false
+$AcceptTweaksRisk = $false
+
+# Shell Variables
+$TerminalWindowWidth = 0
 $TerminalWindowWidth = [int][System.Math]::Round($Host.UI.RawUI.WindowSize.Width / 2, [System.MidpointRounding]::AwayFromZero)
+
+# System Version
+$OSVersion = ((Get-CimInstance -ClassName Win32_OperatingSystem).Caption) -replace "Microsoft ", ""
+$WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion -like "*Windows 10*") { 10 } else { 0 }
+
+# GPU
+$AMDRegistryPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
+$NVIDIARegistryPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $Card = ""
-[string]$OSVersion = ((Get-CimInstance -ClassName Win32_OperatingSystem).Caption) -replace "Microsoft ", ""
-[int]$WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion -like "*Windows 10*") { 10 } else { 0 }
-$AmdRegPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
-$NvRegPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
+
+# Memory
 $TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
-$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$logfilepath = "C:\Refyne\logfile-$($timestamp).txt"
-$regfilepath = "C:\Refyne\resources\regedits.bak"
-$bcdfilepath = "C:\Refyne\resources\backup.bcd"
-$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+# Logging and Backup Paths
+$TimeStamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$LogFilePath = "C:\Refyne\logfile-$($TimeStamp).txt"
+$RegistryBackupPath = "C:\Refyne\resources\regedits.bak"
+$BCDBackupPath = "C:\Refyne\resources\backup.bcd"
+
+# Timer
+$StopWatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 # -----------------------------------------------------------------
 # Enums
@@ -44,6 +61,19 @@ enum Severity {
     Fatal
     Success
     Info
+}
+
+enum Stage {
+    Recovery
+    BCD
+    Memory
+    Registry
+    GPU
+    Network
+    Interrupts
+    Tweak
+    Windows10
+    Final
 }
 
 # -----------------------------------------------------------------
@@ -228,7 +258,7 @@ function Show-Disclosure {
         [Parameter(ValueFromPipeline = $true)]
         [string[]]$InputObject,
         [Severity]$severity,
-        [string]$scope,
+        [Stage]$scope,
         [string]$prompt
     )
 
@@ -337,7 +367,7 @@ function Write-Windows10Warning {
     }
 
     PROCESS {
-        Show-Disclosure $lines Warn "W10" "Type [Y]es to agree or [N]o to close"
+        Show-Disclosure $lines Warn Windows10 "Type [Y]es to agree or [N]o to close"
     }
 }
 
@@ -346,7 +376,7 @@ function Write-LegacyWindowsWarning () {
     PARAM ( 
         [Parameter()]
         [string]$OSVersion
-     ) # No parameters
+    ) # No parameters
 
     BEGIN {
         Clear-Host
@@ -376,7 +406,7 @@ function Write-MemTweakWarning {
     }
 
     PROCESS {
-        Show-Disclosure $lines Warn "MEM" "Type [Y]es to agree or [N]o to close"
+        Show-Disclosure $lines Warn Memory "Type [Y]es to agree or [N]o to close"
     }
 }
 
@@ -399,7 +429,7 @@ function Write-RisksWarning {
     }
 
     PROCESS {
-        Show-Disclosure $lines Warn "TWEAK" "Type [Y]es to agree or [N]o to close"
+        Show-Disclosure $lines Warn Tweak "Type [Y]es to agree or [N]o to close"
     }
 }
 
@@ -409,7 +439,7 @@ function Get-UserIntent {
         [ValidateSet('y', 'n', 'x', 'a', 'r')]
         [string]$UserInput,
         [Parameter(Mandatory = $true)]
-        [string]$Stage
+        [Stage]$Stage
     )
     BEGIN {
 
@@ -418,23 +448,22 @@ function Get-UserIntent {
         switch -regex ($UserInput.ToLower()) {
             'y' { 
                 switch ($stage) {
-                    'W10' {
+                    [Stage]::Windows10 {
                         $script:AcceptW10Risk = $true
                         $script:AcceptTweaksRisk = $true
                         Clear-Host
                         Set-EnableSystemRecovery
                     }
-                    'MEM' {
+                    [Stage]::Memory {
                         $script:AcceptMemRisk = $true
                         Clear-Host
-                        Set-BCDTweaksMem                
+                        Set-BCDTweaksMem
                     }
-                    'TWEAK' {
+                    [Stage]::Tweak {
                         $script:AcceptTweaksRisk = $true
                         Clear-Host
-                        Set-EnableSystemRecovery                
+                        Set-EnableSystemRecovery
                     }
-                    Default: {}
                 }
             }
             'n' {
@@ -445,13 +474,13 @@ function Get-UserIntent {
             }
             'a' {
                 switch ($stage) {
-                    "rec" { Set-BCDTweaks }
-                    "bcd" { Write-MemTweakWarning }
-                    "mem" { Set-Tweaks }
-                    "reg" {  }
-                    "gpu" {  }
-                    "net" {  }
-                    "inter" {  }
+                    [Stage]::Recovery { Set-BCDTweaks }
+                    [Stage]::BCD { Write-MemTweakWarning }
+                    [Stage]::Memory { Set-Tweaks }
+                    [Stage]::Registry {  }
+                    [Stage]::GPU {  }
+                    [Stage]::Network {  }
+                    [Stage]::Interrupts {  }
                 }
             }
             'r' {
@@ -501,23 +530,24 @@ function Undo-SystemChanges {
     )
 
     BEGIN {
-        if (Test-Path $RegBack) {
-            $RegBack = (Get-Content -Path $regfilepath)
-            Write-StatusLine info "Undoing $($RegBack.Length) changes to registry and reverting to stock BCD..."
-        } else {
-            Write-StatusLine warn "No registry backup captured, exiting..."
-            Start-Sleep -Seconds 2
+        if (Test-Path $RegistryBackupPath) {
+            Write-StatusLine Info "Found registry backup, reverting to stock settings..."
+            $RegBack = (Get-Content -Path $RegistryBackupPath)
+        }
+        else {
+            Write-StatusLine Fatal "No registry backup found, cannot revert to stock settings..."
             exit
         }
     }
 
     PROCESS {
-        for ($i=0;$i -lt $RegBack.Length;$i++) {
+        for ($i = 0; $i -lt $RegBack.Length; $i++) {
             $PathKeyArr =$(RegBack[$i]).Split(";")
             if (-NOT ($param[2] -eq 'Binary')) {
                  Write-RegistryKey "$($PathKeyArr[0])" "$($PathKeyArr[1])" "$($PathKeyArr[2])" "$($PathKeyArr[3])"
                 Write-StatusLine info "Reset value for $($PathKeyArr[1]) to default settings."
-            } else {
+            }
+            else {
                 Write-BinaryRegistry "$($PathKeyArr[0])" "$($PathKeyArr[1])" "$($PathKeyArr[3])"
                 Write-StatusLine info "Reset value for $($PathKeyArr[1]) to default settings."
             }
@@ -538,11 +568,11 @@ function Write-LogEntry {
     )
 
     BEGIN {
-        $bodytimestamp = "[$([int]$stopwatch.Elapsed.TotalSeconds)s] $($body)"
+        $bodytimestamp = "[$([int]$StopWatch.Elapsed.TotalSeconds)s] $($body)"
     }
 
     PROCESS {
-        Write-Output -InputObject "$bodytimestamp" >> $logfilepath
+        Write-Output -InputObject "$bodytimestamp" >> $LogFilePath
     }
 }
 
@@ -556,10 +586,11 @@ function Backup-BCDStorage {
     }
 
     PROCESS {
-        if (-NOT (Test-Path $bcdfilepath)) {
-            $cmdstring = 'bcdedit /export "{0}"' -f $bcdfilepath
+        if (-NOT (Test-Path $BCDBackupPath)) {
+            $cmdstring = 'bcdedit /export "{0}"' -f $BCDBackupPath
             Read-CommandStatus $cmdstring "backing up BCD storage device."
-        } else {
+        }
+        else {
             Write-StatusLine Info "Already have a backup saved, moving on..."
         }
     }
@@ -580,11 +611,12 @@ function Backup-RegistryPathKey {
     }
 
     PROCESS {
-        if (-NOT (Test-Path $regfilepath)) {
+        if (-NOT (Test-Path $RegistryBackupPath)) {
             $Value = (Get-ItemProperty -Path "$regpath" -Name "$regkey" | Select-Object -First 1).$regkey
-            Write-Output -InputObject "$($regpath);$($regkey);$($proptype);$($Value)" >> $regfilepath
+            Write-Output -InputObject "$($regpath);$($regkey);$($proptype);$($Value)" >> $RegistryBackupPath
             Write-StatusLine Info "Backing up default value for $regkey..."
-        } else {
+        }
+        else {
             Write-StatusLine Info "Already captured registry backup, moving on..."
         }
     }
@@ -609,14 +641,15 @@ function Write-RegistryKey {
             Write-LogEntry "Registry path created: `"$regpath`" for key `"$regkey`""
             $cmdstring = 'New-Item -LiteralPath "{0}"' -f $regpath
             Read-CommandStatus $cmdstring "create registry key for $regkey"
-        } else {
+        }
+        else {
             Backup-RegistryPathKey $regpath $regkey $proptype
         }
     }
 
     PROCESS {
         Write-LogEntry "Registry path modified: `"$regpath`" for key `"$regkey`" with value `"$regvalue`" using datatype $proptype"
-        $cmdstring = 'New-ItemProperty -LiteralPath "{0}" -Name "{1}" -Value {2} -PropertyType {3} -Force' -f $regpath,$regkey,$regvalue,$proptype
+        $cmdstring = 'New-ItemProperty -LiteralPath "{0}" -Name "{1}" -Value {2} -PropertyType {3} -Force' -f $regpath, $regkey, $regvalue, $proptype
         Read-CommandStatus $cmdstring "set $regkey"
     }
 }
@@ -668,7 +701,7 @@ function Remove-RegistryKey {
         else {
             if (Test-Path $regpath) { Write-StatusLine Info "previously removed $step, skipping..." } else {
                 Backup-RegistryPathKey $regpath $regkey "$(Get-ItemProperty -Path `"$regpath`" -Name `"$regkey`" | Select-Object -First 1).$regkey"
-                $cmdstring = 'Remove-ItemProperty -LiteralPath "{0}" -Name {1}' -f $regpath,$regkey
+                $cmdstring = 'Remove-ItemProperty -LiteralPath "{0}" -Name {1}' -f $regpath, $regkey
                 Write-LogEntry "Registry path removed: `"$regpath`" with key: `"$regkey`""
                 Read-CommandStatus $cmdstring "remove $regkey"
             }
@@ -752,7 +785,7 @@ function Set-BCDTweaks {
         }
         else {
             Clear-Host
-            Show-DisclosureError Bcd
+            Show-DisclosureError BCD
         } 
     }
 }
@@ -913,11 +946,11 @@ function Set-RegistryTweaksNvidia {
 
     BEGIN {
         Write-StatusLine Info "Applying NVIDIA-focused driver tweaks to registry..."
-        $NvRegPath = (reg query "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /t REG_SZ /s /e /f "NVIDIA" | findstr "HKEY" | Select-Object -First 1)
+        $NVIDIARegistryPath = (reg query "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /t REG_SZ /s /e /f "NVIDIA" | findstr "HKEY" | Select-Object -First 1)
     }
 
     PROCESS {
-        foreach ($regline in $NvRegPath) {
+        foreach ($regline in $NVIDIARegistryPath) {
             $line = Convert-RegistryPath $regline
             Write-RegistryKey "$($line)" "PowerMizerEnable" "DWord" "1"
             Write-RegistryKey "$($line)" "PowerMizerLevel" "DWord" "1"
@@ -955,15 +988,15 @@ function Set-RegistryTweaksAmd {
 
     BEGIN {
         Write-StatusLine Info "Applying AMD-focused driver tweaks to registry..."
-        $AmdRegPath = (reg query "HKLM\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /s /v "DriverDesc" | findstr "HKEY AMD ATI Radeon" | Select-Object -First 1)        
+        $AMDRegistryPath = (reg query "HKLM\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /s /v "DriverDesc" | findstr "HKEY AMD ATI Radeon" | Select-Object -First 1)        
     }
 
     PROCESS {
         if ($Card.Contains('Series')) { 
             Clear-Host
             Set-RegistryTweaksInterrupts
-         }
-        foreach ($regline in $AmdRegPath) {
+        }
+        foreach ($regline in $AMDRegistryPath) {
             $line = Convert-RegistryPath $regline
             Write-RegistryKey "$($line)" "3to2Pulldown_NA" "DWord" "0"
             Write-RegistryKey "$($line)" "Adaptive De-interlacing" "DWord" "1"
@@ -1143,7 +1176,7 @@ function Set-NetworkTweaks {
     END {
         if ($script:ErrorCount -lt 1) {
             $script:stopwatch.Elapsed.TotalSeconds
-            Write-LogEntry "Total time for script execution: $([int]$stopwatch.Elapsed.TotalSeconds) seconds"
+            Write-LogEntry "Total time for script execution: $([int]$StopWatch.Elapsed.TotalSeconds) seconds"
             Write-EndMenuStart
         }
         else {
@@ -1171,9 +1204,9 @@ function Write-MainMenuStart {
     PARAM ( ) # No parameters
 
     BEGIN {
-        New-Item $logfilepath -ItemType File -Force
-        if (-NOT (Test-Path $regfilepath)) {
-            New-Item -Path $regfilepath -ItemType File -Force
+        New-Item $LogFilePath -ItemType File -Force
+        if (-NOT (Test-Path $RegistryBackupPath)) {
+            New-Item -Path $RegistryBackupPath -ItemType File -Force
         }
         Write-LogEntry "Starting Refyne..."
         Clear-Host
@@ -1184,13 +1217,13 @@ function Write-MainMenuStart {
 
     PROCESS {
         $specs = Get-ComputerHardwareSpecification | Format-Table -AutoSize -Property Name, Value
-        $specs >> $logfilepath
+        $specs >> $LogFilePath
         $specs
-        if ($OSVersion -like "*Windows 11*") {
+        if ($WindowsVersion -eq 11) {
             Write-ColorOutput -InputObject  "You're currently running $($OSVersion)! Nice, let's get started." -ForegroundColor Green
             Write-ColorOutput -InputObject "`nOptions:`n" -ForegroundColor DarkGray
-            if (Test-Path $regfilepath -PathType Leaf) { Write-ColorOutput -InputObject "[1] Run Prolix Tweaks                [5] Revert Changes" -ForegroundColor Gray}
-            Write-ColorOutput -InputObject "[2] Generate System Report           [6] Exit" -ForegroundColor Gray
+            if (Test-Path $RegistryBackupPath -PathType Leaf) { Write-ColorOutput -InputObject "[1] Run Prolix Tweaks                [5] Revert Changes" -ForegroundColor Gray } else { Write-ColorOutput -InputObject "[1] Run Prolix Tweaks" -ForegroundColor Gray }
+            Write-ColorOutput -InputObject "[2] Generate System Report" -ForegroundColor Gray
             Write-ColorOutput -InputObject "[3] Optimize PowerShell" -ForegroundColor Gray
             Write-ColorOutput -InputObject "[4] Activate Windows" -ForegroundColor Gray
 
@@ -1218,14 +1251,8 @@ function Write-MainMenuStart {
                 Start-Sleep -Seconds 2
                 exit
             }
-            elseif ($Choice -eq "6") {
-                Clear-Host
-                Write-ColorOutput -InputObject "Exiting..." -ForegroundColor Green
-                Start-Sleep -Seconds 2
-                exit
-            }
         }
-        elseif ($OSVersion -like "*Windows 10*") {
+        elseif ($WindowsVersion -eq 10) {
             Clear-Host
             Write-Windows10Warning
         }
@@ -1254,7 +1281,7 @@ function Write-EndMenuStart {
         Clear-Host
     }
     PROCESS {
-        Show-Disclosure $lines Success "END" "Type [R] to reboot now or [N] to exit without restart [NOT RECOMMENDED]"
+        Show-Disclosure $lines Success Final "Type [R] to reboot now or [N] to exit without restart [NOT RECOMMENDED]"
     } 
 
 }
