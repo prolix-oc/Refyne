@@ -448,18 +448,18 @@ function Get-UserIntent {
         switch -regex ($UserInput.ToLower()) {
             'y' { 
                 switch ($ScriptStage) {
-                    [Stage]::Windows10 {
+                    ([Stage]::Windows10) {
                         $script:AcceptW10Risk = $true
                         $script:AcceptTweaksRisk = $true
                         Clear-Host
                         Set-EnableSystemRecovery
                     }
-                    [Stage]::Memory {
+                    ([Stage]::Memory) {
                         $script:AcceptMemRisk = $true
                         Clear-Host
                         Set-BCDTweaksMem
                     }
-                    [Stage]::Tweak {
+                    ([Stage]::Tweak) {
                         $script:AcceptTweaksRisk = $true
                         Clear-Host
                         Set-EnableSystemRecovery
@@ -474,13 +474,13 @@ function Get-UserIntent {
             }
             'a' {
                 switch ($stage) {
-                    [Stage]::Recovery { Set-BCDTweaks }
-                    [Stage]::BCD { Write-MemTweakWarning }
-                    [Stage]::Memory { Set-Tweaks }
-                    [Stage]::Registry {  }
-                    [Stage]::GPU {  }
-                    [Stage]::Network {  }
-                    [Stage]::Interrupts {  }
+                    ([Stage]::Recovery) { Set-BCDTweaks }
+                    ([Stage]::BCD) { Write-MemTweakWarning }
+                    ([Stage]::Memory) { Set-Tweaks }
+                    ([Stage]::Registry) {  }
+                    ([Stage]::GPU) {  }
+                    ([Stage]::Network) {  }
+                    ([Stage]::Interrupts) {  }
                 }
             }
             'r' {
