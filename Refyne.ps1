@@ -928,13 +928,14 @@ function Set-RegistryTweaksNVIDIA {
 function Set-RegistryTweaksAMD {
     [CmdletBinding()]
     PARAM ( ) # No parameters
+
     BEGIN {
         Write-StatusLine Info "Applying AMD-focused driver tweaks to registry..."
         $AMDRegistryPath = (reg query "HKLM\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /s /v "DriverDesc" | findstr "HKEY AMD ATI Radeon" | Select-Object -First 1)        
     }
 
     PROCESS {
-        if ($script:Card.Contains('Series')) { 
+        if ($script:Card -like '*Series') { 
             Clear-Host
             Write-StatusLine info "No applicable tweaks available for pre-Navi/Crimson-based Radeon cards, moving on..."
             Start-Sleep -Seconds 2
@@ -976,7 +977,6 @@ function Set-RegistryTweaksAMD {
                 Write-RegistryKey "$($line)\UMD" "3D_Refresh_Rate_Override_DEF" "DWord" "0"
             }
         }
-        
     }
 
     END {
