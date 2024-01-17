@@ -312,7 +312,7 @@ function Show-DisclosureError {
     }
 }
 
-function Show-Prompt () {
+function Show-Prompt {
     [CmdletBinding()]
     PARAM (
         [Parameter(Mandatory = $false)]
@@ -542,17 +542,17 @@ function Undo-SystemChanges {
 
     PROCESS {
         for ($i = 0; $i -lt $RegBack.Length; $i++) {
-            $PathKeyArr =$(RegBack[$i]).Split(";")
+            $PathKeyArr = $(RegBack[$i]).Split(";")
             if (-NOT ($param[2] -eq 'Binary')) {
-                 Write-RegistryKey "$($PathKeyArr[0])" "$($PathKeyArr[1])" "$($PathKeyArr[2])" "$($PathKeyArr[3])"
+                Write-RegistryKey "$($PathKeyArr[0])" "$($PathKeyArr[1])" "$($PathKeyArr[2])" "$($PathKeyArr[3])"
                 Write-StatusLine info "Reset value for $($PathKeyArr[1]) to default settings."
             }
             else {
                 Write-BinaryRegistry "$($PathKeyArr[0])" "$($PathKeyArr[1])" "$($PathKeyArr[3])"
                 Write-StatusLine info "Reset value for $($PathKeyArr[1]) to default settings."
             }
-        $cmdstring = 'bcdedit /import "{0}"' -f $bcdfilepath
-        Read-CommandStatus $cmdstring "restoring default BCD storage device."
+            $cmdstring = 'bcdedit /import "{0}"' -f $bcdfilepath
+            Read-CommandStatus $cmdstring "restoring default BCD storage device."
         }
     }
 
@@ -691,7 +691,6 @@ function Remove-RegistryKey {
     PROCESS {
         if ($haskey -eq 0) {
             if (Test-Path $regpath) { Write-StatusLine Info "previously removed $step, skipping..." } else {
-
                 Backup-RegistryPathKey $regpath "NA" "DELETE"
                 Write-LogEntry "Registry path removed: $regpath"
                 $cmdstring = 'Remove-Item -LiteralPath "{0}"' -f $regpath
@@ -722,17 +721,18 @@ function Set-EnableSystemRecovery {
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\SystemRestore" "SystemRestorePointCreationFrequency" "DWord" "0"
         $targets = ""
         $fsdrive = Get-PSDrive -PSProvider FileSystem 
-        for ($i=0;$i -lt $fsdrive.Length; $i++) {
+        for ($i = 0; $i -lt $fsdrive.Length; $i++) {
             if ($i -eq ($fsdrive.Length - 1)) {
                 $targets += "'$($fsdrive[$i].Root)'"
-                Write-StatusLine "info" "Enabled restore point creation for $($fsdrive[$i].Root)"
-            } else {
+                Write-StatusLine Info "Enabled restore point creation for $($fsdrive[$i].Root)"
+            }
+            else {
                 $targets += "'$($fsdrive[$i].Root)', "
-                Write-StatusLine "info" "Enabled restore point creation for $($fsdrive[$i].Root)"
+                Write-StatusLine Info "Enabled restore point creation for $($fsdrive[$i].Root)"
             }
         }
         Read-CommandStatus "Enable-ComputerRestore -Drive $($targets)" "enabled restore for all system drives"
-        Write-StatusLine "info" "Making a restore point for this system..."
+        Write-StatusLine Info "Making a restore point for this system..."
         Read-CommandStatus "Checkpoint-Computer -Description 'RefyneTweaks'" "created a restore point pre-Refyne"
     }
 
@@ -907,7 +907,7 @@ function Set-Tweaks {
     END {
         if ($script:ErrorCount -lt 1) {
             Clear-Host
-            Read-GPUManu
+            Read-GPUManual
         }
         else {
             Clear-Host
@@ -916,7 +916,7 @@ function Set-Tweaks {
     }
 }
 
-function Read-GPUManu {
+function Read-GPUManual {
     PARAM ()
     BEGIN {
         Write-StatusLine Info "Determining GPU optimizations to apply..."
@@ -926,11 +926,11 @@ function Read-GPUManu {
         switch -regex ($script:Card.ToLower()) {
             'nvidia' {             
                 Clear-Host
-                Set-RegistryTweaksNvidia 
+                Set-RegistryTweaksNVIDIA 
             }
             'amd' {
                 Clear-Host 
-                Set-RegistryTweaksAmd 
+                Set-RegistryTweaksAMD 
             }
             Default: { 
                 Clear-Host
@@ -940,7 +940,7 @@ function Read-GPUManu {
     }
 }
 
-function Set-RegistryTweaksNvidia {
+function Set-RegistryTweaksNVIDIA {
     [CmdletBinding()]
     PARAM ( ) # No parameters
 
@@ -982,7 +982,7 @@ function Set-RegistryTweaksNvidia {
     }
 }
 
-function Set-RegistryTweaksAmd {
+function Set-RegistryTweaksAMD {
     [CmdletBinding()]
     PARAM ( ) # No parameters
 

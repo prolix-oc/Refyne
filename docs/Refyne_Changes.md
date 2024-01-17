@@ -281,17 +281,6 @@ Invoke-RestMethod 'https://raw.githubusercontent.com/luke-beep/GSR/main/Generate
 irm https://massgrave.dev/get | iex
 ```
 
-### Global Variables
-
-```powershell
-$TerminalWindowWidth = [int][System.Math]::Round($Host.UI.RawUI.WindowSize.Width / 2, [System.MidpointRounding]::AwayFromZero)
-[string]$OSVersion = ((Get-CimInstance -ClassName Win32_OperatingSystem).Caption) -replace "Microsoft ", ""
-[int]$WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion -like "*Windows 10*") { 10 } else { 0 }
-$AmdRegPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
-$NvRegPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
-$TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
-```
-
 --- 
 
 **<div align="center" id="footer">© 2024 Refyne. All rights reserved. <div>**
