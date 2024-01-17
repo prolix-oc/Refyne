@@ -21,6 +21,8 @@ $CurrentVersion = "0.0.7-beta"
 [bool]$AcceptW10Risk = $false
 [bool]$AcceptMemRisk = $false
 [bool]$AcceptTweaksRisk = $false
+[bool]$RegBackupCaptured = $false
+[bool]$BCDBackupCaptured = $false
 [int]$TerminalWindowWidth = 0
 $TerminalWindowWidth = [int][System.Math]::Round($Host.UI.RawUI.WindowSize.Width / 2, [System.MidpointRounding]::AwayFromZero)
 $Card = ""
@@ -29,6 +31,8 @@ $Card = ""
 $AmdRegPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $NvRegPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
+$timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 # -----------------------------------------------------------------
 # Enums
@@ -229,11 +233,11 @@ function Show-Disclosure {
 
     BEGIN {
         switch ($severity) {
-            Warn { Write-ColorOutput -InputObject "[WARNING]" -ForegroundColor Yellow -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length / 2))  -VerticalPad 2 }
-            Fatal { Write-ColorOutput -InputObject "[FATAL ERROR]" -ForegroundColor Red -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length / 2)) -VerticalPad 2 }
-            Success { Write-ColorOutput -InputObject "[SUCCESS]" -ForegroundColor Green -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length / 2)) -VerticalPad 2 }
-            Info { Write-ColorOutput -InputObject "[INFO]" -ForegroundColor Gray -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length / 2)) -VerticalPad 2 }
-            Default { Write-ColorOutput -ForegroundColor White -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length / 2)) -VerticalPad 2 }
+            Warn { Write-ColorOutput -InputObject "[WARNING]" -ForegroundColor Yellow -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length))  -VerticalPad 2 }
+            Fatal { Write-ColorOutput -InputObject "[FATAL ERROR]" -ForegroundColor Red -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length)) -VerticalPad 2 }
+            Success { Write-ColorOutput -InputObject "[SUCCESS]" -ForegroundColor Green -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length)) -VerticalPad 2 }
+            Info { Write-ColorOutput -InputObject "[INFO]" -ForegroundColor Gray -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length)) -VerticalPad 2 }
+            Default { Write-ColorOutput -ForegroundColor White -HorizontalPad ($TerminalWindowWidth - [Math]::Floor($discheader.Length)) -VerticalPad 2 }
         }
     }
 
@@ -320,29 +324,35 @@ function Write-Windows10Warning {
 
     BEGIN {
         Clear-Host
+        $lines = @(
+            "These tweaks are not certified to run on Windows 10 at this time, but may still work.",
+            "`nDESPITE `"still working`", they do have the possibility of adversely affecting your system in a negative way.",
+            "If you choose to run Refyne on this Windows 10 machine regardless, you are assuming any liability for a damaged system or unbootable environment.",
+            "This message isn't meant to fearmonger, but it is an inevitable reality when it comes to doing things you possibly shouldn't.",
+            "`nIf you want a better chance of Refyne working properly, then I'd recommend upgrading to Windows 11 (namely the Pro for Workstations variant) and starting there.",
+            "`If you choose to use the tweak anyways, and accept in the next prompt: no support will be provided. You are in uncharted territory.",
+            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud], but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
+        )
     }
 
     PROCESS {
-        Write-ColorOutput -InputObject  "`nYou're currently running $($OSVersion). Be aware of a few things:`n"-ForegroundColor Yellow -HorizontalPad ($TerminalWindowWidth)
-        Write-ColorOutput -InputObject  "- $($OSVersion) is not officially supported by my script, but the optimizations have a chance to still work.`n- By choosing to run this script anyways, you assume all risks to YOUR system's integrity.`n- By agreeing to the prompt, you are rescinding your chance for support by not running the proper script designed for your OS.`n- If you need a script designed for Windows 10, join Prolix's Discord [https://discord.gg/ffW3vCpGud] and keep an eye out for the release." -ForegroundColor Gray
-        $Choice = Show-Prompt "`nType [Y/y]es to accept and proceed, or [N/n]o to exit"
-    }
-
-    END {
-        Get-UserIntent $Choice "W10" 
+        Show-Disclosure $lines Warn "W10" "Type [Y]es to agree or [N]o to close"
     }
 }
 
 function Write-LegacyWindowsWarning () {
     [CmdletBinding()]
-    PARAM ( ) # No parameters
+    PARAM ( 
+        [Parameter()]
+        [string]$OSVersion
+     ) # No parameters
 
     BEGIN {
         Clear-Host
     }
 
     PROCESS {
-        Write-ColorOutput -InputObject  "You're running an unsupported Windows version!" -ForegroundColor Red -HorizontalPad $($TerminalWindowWidth) 
+        Write-ColorOutput -InputObject  "You're running an unsupported Windows version! $OSVersion is not supported by Refyne!" -ForegroundColor Red -HorizontalPad $($TerminalWindowWidth) 
     }
 }
 
@@ -464,7 +474,8 @@ function Read-CommandStatus {
 
     PROCESS {
         $ProgressPreference = 'SilentlyContinue'
-        $null = Invoke-Expression $command
+        Write-LogEntry "Command run: $command"
+        $null = Invoke-Expression $command 
     }
 
     END {
@@ -483,6 +494,65 @@ function Read-CommandStatus {
 # Main Functions
 # -----------------------------------------------------------------
 
+function Write-LogEntry {
+    [CmdletBinding()]
+    PARAM (
+        [Parameter(Mandatory = $true)]
+        [string]$body
+    )
+
+    BEGIN {
+        $bodytimestamp = "[$([int]$stopwatch.Elapsed.TotalSeconds)s] $($body)"
+    }
+
+    PROCESS {
+        Write-Output -InputObject "$bodytimestamp" >> C:\Refyne\logfile-$timestamp.txt
+    }
+}
+
+function Backup-BCDStorage {
+    [CmdletBinding()]
+    PARAM (
+    )
+
+    BEGIN {
+        
+    }
+
+    PROCESS {
+        if (!$script:BCDBackupCaptured) {
+            Read-CommandStatus 'bcdedit /export "C:\Refyne\resources\backup.bcd"' "backing up BCD storage device."
+        } else {
+            Write-StatusLine Info "Already have a backup saved, moving on..."
+        }
+    }
+}
+function Backup-RegistryPathKey {
+    [CmdletBinding()]
+    PARAM (
+        [Parameter(Mandatory = $true)]
+        [string]$regpath,
+        [Parameter(Mandatory = $true)]
+        [string]$regkey,
+        [Parameter(Mandatory = $true)]
+        [string]$proptype
+    )
+
+    BEGIN {
+        
+    }
+
+    PROCESS {
+        if (!$script:RegBackupCaptured) {
+            $Value = (Get-ItemProperty -Path "$regpath" -Name "$regkey" | Select-Object -First 1).$regkey
+            Write-Output -InputObject "$($regpath);$($regkey);$($proptype);$($Value)" >> C:\Refyne\resources\regedits.bak
+            Write-StatusLine Info "Backing up default value for $regkey..."
+        } else {
+            Write-StatusLine Info "Already captured registry backup, moving on..."
+        }
+    }
+}
+
 function Write-RegistryKey {
     [CmdletBinding()]
     PARAM (
@@ -499,13 +569,17 @@ function Write-RegistryKey {
     BEGIN {
         if (-NOT (Test-Path $regpath)) {
             Write-StatusLine Info "Registry key for $regkey does not exist, creating..."
-            $cmdstring = 'New-Item -Path ''{0}''' -f $regpath
+            Write-LogEntry "Registry path created: `"$regpath`" for key `"$regkey`""
+            $cmdstring = 'New-Item -LiteralPath "{0}"' -f $regpath
             Read-CommandStatus $cmdstring "create registry key for $regkey"
+        } else {
+            Backup-RegistryPathKey $regpath $regkey $proptype
         }
     }
 
     PROCESS {
-        $cmdstring = 'New-ItemProperty -Path ''{0}'' -Name ''{1}'' -Value {2} -PropertyType {3} -Force' -f $regpath, $regkey, $regvalue, $proptype
+        Write-LogEntry "Registry path modified: `"$regpath`" for key `"$regkey`" with value `"$regvalue`" using datatype $proptype"
+        $cmdstring = 'New-ItemProperty -LiteralPath "{0}" -Name "{1}" -Value {2} -PropertyType {3} -Force' -f $regpath,$regkey,$regvalue,$proptype
         Read-CommandStatus $cmdstring "set $regkey"
     }
 }
@@ -520,8 +594,10 @@ function Write-BinaryRegistry {
         [byte[]]$regvalue
     )
     BEGIN {
+        Backup-RegistryPathKey $regpath $regkey "Binary"
     }
     PROCESS {
+        Write-LogEntry "Registry path modified: `"$regpath`" for key `"$regkey`" with value `"$regvalue`" using datatype Binary"
         New-ItemProperty -LiteralPath $regpath -Name $regkey -Value $regvalue -PropertyType Binary -Force
     }
 }
@@ -538,16 +614,25 @@ function Remove-RegistryKey {
         [string]$step
     )
 
+    BEGIN {
+
+    }
+
     PROCESS {
         if ($haskey -eq 0) {
-            if (Test-Path $regpath) { Write-StatusLine Info "Seems we've already $step, skipping..." } else {
+            if (Test-Path $regpath) { Write-StatusLine Info "previously removed $step, skipping..." } else {
+
+                Backup-RegistryPathKey $regpath "NA" "DELETE"
+                Write-LogEntry "Registry path removed: $regpath"
                 $cmdstring = 'Remove-Item -LiteralPath "{0}"' -f $regpath
                 Read-CommandStatus $cmdstring "remove $step"
             }
         }
         else {
-            if (Test-Path $regpath) { Write-StatusLine Info "Seems we've already $step, skipping..." } else {
-                $cmdstring = 'Remove-ItemProperty -LiteralPath {0} -Name {1}' -f $regpath, $regkey
+            if (Test-Path $regpath) { Write-StatusLine Info "previously removed $step, skipping..." } else {
+                Backup-RegistryPathKey $regpath $regkey "$(Get-ItemProperty -Path `"$regpath`" -Name `"$regkey`" | Select-Object -First 1).$regkey"
+                $cmdstring = 'Remove-ItemProperty -LiteralPath "{0}" -Name {1}' -f $regpath,$regkey
+                Write-LogEntry "Registry path removed: `"$regpath`" with key: `"$regkey`""
                 Read-CommandStatus $cmdstring "remove $regkey"
             }
         }
@@ -588,10 +673,12 @@ function Set-BCDTweaks {
     
     BEGIN {
         $script:ErrorCount = 0
-        Write-StatusLine Info "Applying tweaks to Boot Configuration Device..."
+        Write-StatusLine Info "back up Boot Configuration Device"
+        Backup-BCDStorage
     }
 
     PROCESS {
+        Write-StatusLine Info "Applying tweaks to Boot Configuration Device..."
         Read-CommandStatus 'bcdedit /set useplatformtick yes' "enable usage of platform ticks"
         Read-CommandStatus 'bcdedit /set disabledynamictick yes' "disable dynamic platform ticks"
         Read-CommandStatus 'bcdedit /set useplatformclock no' "disable use of platform clock-source"
@@ -664,7 +751,7 @@ function Set-Tweaks {
 
         Write-StatusLine Info "Modifying your pagefile settings..."
         Read-CommandStatus 'Start-Process -FilePath "cmd" -ArgumentList "/c wmic computersystem where name=`"$env:COMPUTERNAME`" set AutomaticManagedPagefile=False" -Wait' "Disable automatic pagefile management"
-        Read-CommandStatus 'Start-Process -FilePath "cmd" -ArgumentList "/c wmic pagefileset where name="C:\\pagefile.sys" set InitialSize=12000,MaximumSize=16000" -Wait' "Set pagefile size to 12-16GB"
+        Read-CommandStatus 'Start-Process -FilePath "cmd" -ArgumentList "/c wmic pagefileset where name="C" "\pagefile.sys" set InitialSize=12000,MaximumSize=16000" -Wait' "Set pagefile size to 12-16GB"
 
         Write-StatusLine Info "Applying tweaks to registry..."
         Write-RegistryKey "HKLM:\System\ControlSet001\Control\PriorityControl" "Win32PrioritySeparation" "DWord" "42"
@@ -676,19 +763,19 @@ function Set-Tweaks {
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\GpuEnergyDrv" "Start" "DWord" "2"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\GpuEnergyDr" "Start" "DWord" "2"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control" "SvcHostSplitThresholdInKB" "DWord" "$($osMemory)"
-        Write-RegistryKey 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\kernel' "GlobalTimerResolutionRequests" "DWord" "1"
-        Write-RegistryKey 'HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management' "LargeSystemCache" "DWord" "1"
-        Write-RegistryKey 'HKLM:\System\CurrentControlSet\Control\Session Manager\Power' "HiberbootEnabled" "DWord" "0"
-        Write-RegistryKey 'HKLM:\System\CurrentControlSet\Control\Session Manager' "HeapDeCommitFreeBlockThreshold" "DWord" "262144"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\FileSystem" "LongPathsEnabled" "DWord" "0"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\kernel" "GlobalTimerResolutionRequests" "DWord" "1"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "LargeSystemCache" "DWord" "1"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Power" "HiberbootEnabled" "DWord" "0"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager" "HeapDeCommitFreeBlockThreshold" "DWord" "262144"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\FileSystem\" "LongPathsEnabled" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\GraphicsDrivers\Scheduler" "EnablePreemption" "DWord" "1"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\GraphicsDrivers" "PlatFORmSupportMiracast" "DWord" "0"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\GraphicsDrivers" "PlatformSupportMiracast" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Power\PowerThrottling" "PowerThrottlingOff" "DWord" "00000001"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\CrashControl" "DisplayParameters" "DWord" "1"
-        Write-RegistryKey "HKLM:\SOFTWARE\Policies\Microsoft\Windows\AppCompat" "AITEnable" "DWord" "0"
-        Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" "DpiMapIommuContiguous" "DWord" "1"
-        Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" "DisablePagingExecutive " "DWord" "1"
-        Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Control\Session` Manager\Memory` Management" "LargeSystemCache " "DWord" "1"
+        Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\AppCompat" "AITEnable" "DWord" "0"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\GraphicsDrivers" "DpiMapIommuContiguous" "DWord" "1"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "DisablePagingExecutive " "DWord" "1"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "LargeSystemCache " "DWord" "1"
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" "Value" "String" "Deny"
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\DataCollection" "AllowTelemetry" "DWord" "0"
         Write-RegistryKey "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" "ContentDeliveryAllowed" "DWord" "0"
@@ -706,21 +793,22 @@ function Set-Tweaks {
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\System" "UploadUserActivities" "DWord" "0"
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\DataCollection" "AllowTelemetry" "DWord" "0"
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" "DisableSoftLanding" "DWord" "1"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Sensor\Overrides\{{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" "SensorPermissionState" "DWord" "0"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Image` File` Execution` Options\csrss.exe\PerfOptions" "CpuPriorityClass" "DWord" "4"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Image` File` Execution` Options\csrss.exe\PerfOptions" "IoPriority" "DWord" "3"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Multimedia\SystemProfile" "NoLazyMode" "DWord" "1"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Multimedia\SystemProfile" "AlwaysOn" "DWord" "1"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Multimedia\SystemProfile" "SystemResponsiveness" "DWord" "0"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" "Scheduling Category" "String" "High"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" "GPU Priority" "DWord" "8"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" "Priority" "DWord" "6"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Reliability" "TimeStampInterval " "DWord" "0"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" "SensorPermissionState" "DWord" "0"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\csrss.exe\PerfOptions" "CpuPriorityClass" "DWord" "4"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\csrss.exe\PerfOptions" "IoPriority" "DWord" "3"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" "NoLazyMode" "DWord" "1"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" "AlwaysOn" "DWord" "1"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" "SystemResponsiveness" "DWord" "0"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" "Scheduling Category" "String" "High"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" "GPU Priority" "DWord" "8"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" "Priority" "DWord" "6"
         Write-RegistryKey "HKLM:\Software\Microsoft\FTH" "Enabled" "DWord" "0"
         Write-RegistryKey "HKLM:\SOFTWARE\Policies\Microsoft\FVE" "DisableExternalDMAUnderLock" "DWord" "0"
         Write-RegistryKey "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" "EnableVirtualizationBasedSecurity" "DWord" "0"
         Write-RegistryKey "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" "HVCIMATRequired" "DWord" "0"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer" "Max` Cached` Icons" "String" "4096"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows\Dwm" "OverlayTestMode" "DWord" "5"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer" "Max Cached Icons" "String" "4096"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows\Dwm\" "OverlayTestMode" "DWord" "5"
         Write-RegistryKey "HKLM:\System\Maps" "AutoUpdateEnabled" "DWord" "0"
         Write-RegistryKey "HKCU:\Software\Microsoft\GameBar" "AllowAutoGameMode" "DWord" "1"
         Write-RegistryKey "HKCU:\Software\Microsoft\GameBar" "AutoGameModeEnabled" "DWord" "1"
@@ -756,12 +844,17 @@ function Read-GPUManu {
     PROCESS {
         switch -regex ($script:Card.ToLower()) {
             'nvidia' {             
+                Clear-Host
                 Set-RegistryTweaksNvidia 
             }
-            'amd' { 
+            'amd' {
+                Clear-Host 
                 Set-RegistryTweaksAmd 
             }
-            Default: { Set-RegistryTweaksInterrupts }
+            Default: { 
+                Clear-Host
+                Set-RegistryTweaksInterrupts 
+            }
         }
     }
 }
@@ -782,11 +875,12 @@ function Set-RegistryTweaksNvidia {
             Write-RegistryKey "$($line)" "PowerMizerLevel" "DWord" "1"
             Write-RegistryKey "$($line)" "PowerMizerLevelAC" "DWord" "1"
             Write-RegistryKey "$($line)" "PerfLevelSrc" "DWord" "8738"
-            Write-RegistryKey "HKLM:\Software\NVIDIA` Corporation\NvControlPanel2\Client" "PerfLevelSrc" "DWord" "8738"
-            Write-RegistryKey "HKLM:\Software\NVIDIA` Corporation\Global\FTS" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "$($line)" "PreferSystemMemoryContiguous" "DWord" "1"
+            Write-RegistryKey "HKLM:\Software\NVIDIA Corporation\NvControlPanel2\Client" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\Software\NVIDIA Corporation\Global\FTS" "PerfLevelSrc" "DWord" "8738"
             Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\nvlddmkm\Global\NVTweak" "PerfLevelSrc" "DWord" "8738"
             Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\nvlddmkm\FTS" "PerfLevelSrc" "DWord" "8738"
-            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm" "PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\PerfLevelSrc" "DWord" "8738"
             Remove-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" $true "NvBackend" "remove NVIDIA backend services"
             Read-CommandStatus "schtasks /change /disable /tn `"NvTmRep_CrashReport2_{B2FE1952-0186-46C3-BAEC-A80AA35AC5B8}`"" "disable crash reporting instance two"
             Read-CommandStatus "schtasks /change /disable /tn `"NvTmRep_CrashReport3_{B2FE1952-0186-46C3-BAEC-A80AA35AC5B8}`"" "disable crash reporting instance three"
@@ -817,6 +911,10 @@ function Set-RegistryTweaksAmd {
     }
 
     PROCESS {
+        if ($Card.Contains('Series')) { 
+            Clear-Host
+            Set-RegistryTweaksInterrupts
+         }
         foreach ($regline in $AmdRegPath) {
             $line = Convert-RegistryPath $regline
             Write-RegistryKey "$($line)" "3to2Pulldown_NA" "DWord" "0"
@@ -882,25 +980,25 @@ function Set-RegistryTweaksInterrupts {
     PROCESS {
         foreach ($line in $gpureg) {
             $lineclean = $line.Trim()
-            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
             Remove-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity Policy" $true "DevicePriority" "removed device priority flag"
-            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity Policy" "DevicePolicy" "DWord" "4"
-            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity Policy" "AssignmentSetOverride" ([byte[]](0xc0))
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device Parameters\Interrupt Management\Affinity Policy" "DevicePolicy" "DWord" "4"
+            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device Parameters\Interrupt Management\Affinity Policy" "AssignmentSetOverride" ([byte[]](0xc0))
 
         }
         foreach ($line in $netreg) {
             $lineclean = $line.Trim()
-            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
-            Remove-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" $true "DevicePriority" "removed device priority flag"
-            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" "DevicePolicy" "DWord" "4"
-            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" "AssignmentSetOverride" ([byte[]](0x30))
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
+            Remove-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity Policy" $true "DevicePriority" "removed device priority flag"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt Management\Affinity Policy" "DevicePolicy" "DWord" "4"
+            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt Management\Affinity Policy" "AssignmentSetOverride" ([byte[]](0x30))
         }
         foreach ($line in $usbpwr) {
             $lineclean = $line.Trim()
-            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt Management\MessageSignaledInterruptProperties" "MSISupported" "DWord" "1"
             Remove-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" $true "DevicePriority" "removed device priority flag"
-            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" "DevicePolicy" "DWord" "4"
-            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt` Management\Affinity` Policy" "AssignmentSetOverride" ([byte[]](0xc0))
+            Write-RegistryKey "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt Management\Affinity Policy" "DevicePolicy" "DWord" "4"
+            Write-BinaryRegistry "HKLM:\System\CurrentControlSet\Enum\$($lineclean)\Device` Parameters\Interrupt Management\Affinity Policy" "AssignmentSetOverride" ([byte[]](0xc0))
         }
         foreach ($regline in $storreg) {
             $line = Convert-RegistryPath $regline
@@ -996,6 +1094,8 @@ function Set-NetworkTweaks {
 
     END {
         if ($script:ErrorCount -lt 1) {
+            $script:stopwatch.Elapsed.TotalSeconds
+            Write-LogEntry "Total time for script execution: $([int]$stopwatch.Elapsed.TotalSeconds) seconds"
             Write-EndMenuStart
         }
         else {
@@ -1023,14 +1123,26 @@ function Write-MainMenuStart {
     PARAM ( ) # No parameters
 
     BEGIN {
+        New-Item C:\Refyne\logfile-$timestamp.txt -ItemType File -Force
+        if (!(Test-Path C:\Refyne\resources\regedits.bak)) {
+            New-Item -Path C:\Refyne\resources\regedits.bak -ItemType File -Force
+            $script:RegBackupCaptured = $false
+            $script:BCDBackupCaptured = $false
+        } else {
+            $script:RegBackupCaptured = $true
+            $script:BCDBackupCaptured = $true
+        }
+        Write-LogEntry "Starting Refyne..."
         Clear-Host
+        $host.ui.RawUI.WindowTitle = "Refyne $($CurrentVersion)"
         Write-ColorOutput -InputObject "Thank you for trusting Prolix OCs with your PC! <3" -ForegroundColor Green
         Write-ColorOutput -InputObject "Join the Discord [https://discord.gg/ffW3vCpGud] for any help." -ForegroundColor Gray 
     }
 
     PROCESS {
-        Get-ComputerHardwareSpecification | Format-Table -AutoSize -Property Name, Value
-
+        $specs = Get-ComputerHardwareSpecification | Format-Table -AutoSize -Property Name, Value
+        $specs >> C:\Refyne\logfile-$timestamp.txt
+        $specs
         if ($OSVersion -like "*Windows 11*") {
             Write-ColorOutput -InputObject  "You're currently running $($OSVersion)! Nice, let's get started." -ForegroundColor Green
             Write-ColorOutput -InputObject "`nOptions:`n" -ForegroundColor DarkGray
@@ -1047,6 +1159,7 @@ function Write-MainMenuStart {
             }
             elseif ($Choice -eq "2") {
                 Clear-Host
+                Write-LogEntry "Running a system report via Luke-Beep's System Report Generator."
                 Read-CommandStatus { Start-Process -FilePath "powershell" -ArgumentList '-Command', "Invoke-RestMethod 'https://raw.githubusercontent.com/luke-beep/GSR/main/GenerateSystemReport.ps1' | Invoke-Expression" -Verb RunAs -Wait } "generate a system report"            
             }
             elseif ($Choice -eq "3") {
@@ -1057,7 +1170,7 @@ function Write-MainMenuStart {
                 Clear-Host
                 Read-CommandStatus "irm https://massgrave.dev/get | iex" "activate Windows using MAS (https://github.com/massgravel/Microsoft-Activation-Scripts) <3"
             }
-            elseif ($Choice -eq "4") {
+            elseif ($Choice -eq "5") {
                 Clear-Host
                 Write-ColorOutput -InputObject "Exiting..." -ForegroundColor Green
                 Start-Sleep -Seconds 2
@@ -1079,7 +1192,6 @@ function Write-EndMenuStart {
     [CmdletBinding()]
     PARAM ( ) # No parameters
     BEGIN {
-        $host.ui.RawUI.WindowTitle = "Refyne $($CurrentVersion)"
         $lines = @(
             "You're all wrapped up! The latest and greatest in optimizations has been applied to your machine. Keep in mind of the following things before you go:`n",
             "- Keep an eye on your performance and notate if anything has degraded in usability or overall performance.",
@@ -1094,8 +1206,9 @@ function Write-EndMenuStart {
         Clear-Host
     }
     PROCESS {
-        Start-Process "https://bitsum.com/"
-        Show-Disclosure -InputObject $lines -Severity Success -Scope "END" -Prompt "Type [R] to reboot now or [N] to exit without restart [NOT RECOMMENDED]"
-    }
+        Show-Disclosure $lines Success "END" "Type [R] to reboot now or [N] to exit without restart [NOT RECOMMENDED]"
+    } 
+
 }
+
 Write-MainMenuStart
