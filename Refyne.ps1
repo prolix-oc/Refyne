@@ -390,29 +390,6 @@ function Write-LegacyWindowsWarning () {
     }
 }
 
-function Write-MemTweakWarning {
-    [CmdletBinding()]
-    PARAM ( ) # No parameters
-
-    BEGIN {
-        Clear-Host
-        $lines = @(
-            "There is a tweak I include in this pack that can adversely affect systems with memory stability issues!",
-            "`nIf you have ever had the following:",
-            "- Bluescreens involving DPC_WATCHDOG_TIMEOUT, IRQL_NOT_LESS_OR_EQUAL, or WHEA_UNCORRECTABLE_ERROR",
-            "- Issues presenting as slow cold boots, multiple restarts when attempting to boot, or `"Overclocking failed`" messages.",
-            "- Frequent file system corruption or even loss of data.",
-            "`n`nI cannot advise you put this particular tweak on your system if you are unsure your RAM overclock or XMP/DOCP profile is `"NASA Stable`", or if any of the mentioned issues occur with your PC.",
-            "`nIf you choose to use the tweak anyways, and accept in the next prompt: no support will be provided until we can verify your RAM is stable, whether that requires de-tuning your RAM OC, changing XMP/DOCP profiles, or reverting to stock configuration.",
-            "`nGeneral support and information for this page can be found in Prolix OCs Discord [https://discord.gg/ffW3vCpGud] under the support channel, but only provided you have done your due diligence and have tried to prevent or fix any issues as a result of your usage."
-        )
-    }
-
-    PROCESS {
-        Show-Disclosure $lines Warn Memory "Type [Y]es to agree or [N]o to close"
-    }
-}
-
 function Write-RisksWarning {
     [CmdletBinding()]
     PARAM ( ) # No parameters
@@ -478,8 +455,8 @@ function Get-UserIntent {
             'a' {
                 switch ($stage) {
                     ([Stage]::Recovery) { Set-BCDTweaks }
-                    ([Stage]::BCD) { Write-MemTweakWarning }
-                    ([Stage]::Memory) { Set-Tweaks }
+                    ([Stage]::BCD) { Set-Tweaks }
+                    ([Stage]::Memory) {  }
                     ([Stage]::Registry) {  }
                     ([Stage]::GPU) {  }
                     ([Stage]::Network) {  }
