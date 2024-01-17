@@ -63,6 +63,8 @@ flowchart TD
         v4(AcceptW10Risk)
         v5(AcceptMemRisk)
         v6(AcceptTweaksRisk)
+        vv7(RegBackupCaptured)
+        vv8(BCDBackupCaptured)
         v7(TerminalWindowWidth)
         v8(Card)
         v9(OSVersion)
@@ -70,6 +72,8 @@ flowchart TD
         v11(AmdRegPath)
         v12(NvRegPath)
         v13(TotalMemory)
+        v14(timestamp)
+        v15(stopwatch)
     end
 
     subgraph Functions
@@ -87,6 +91,9 @@ flowchart TD
         f11[Write-RisksWarning]
         f12[Get-UserIntent]
         f13[Read-CommandStatus]
+        ff14[Write-LogEntry]
+        ff15[Backup-BCDStorage]
+        ff16[Backup-RegistryPathKey]
         f14[Write-RegistryKey]
         f15[Write-BinaryRegistry]
         f16[Set-EnableSystemRecovery]

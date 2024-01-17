@@ -913,7 +913,7 @@ function Set-RegistryTweaksNvidia {
             Write-RegistryKey "HKLM:\Software\NVIDIA Corporation\Global\FTS" "PerfLevelSrc" "DWord" "8738"
             Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\nvlddmkm\Global\NVTweak" "PerfLevelSrc" "DWord" "8738"
             Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\nvlddmkm\FTS" "PerfLevelSrc" "DWord" "8738"
-            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\PerfLevelSrc" "DWord" "8738"
+            Write-RegistryKey "HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\" "PerfLevelSrc" "DWord" "8738"
             Remove-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" $true "NvBackend" "remove NVIDIA backend services"
             Read-CommandStatus "schtasks /change /disable /tn `"NvTmRep_CrashReport2_{B2FE1952-0186-46C3-BAEC-A80AA35AC5B8}`"" "disable crash reporting instance two"
             Read-CommandStatus "schtasks /change /disable /tn `"NvTmRep_CrashReport3_{B2FE1952-0186-46C3-BAEC-A80AA35AC5B8}`"" "disable crash reporting instance three"
