@@ -20,7 +20,7 @@ $ErrorCount = 0
 $FailedCommands = @()
 
 # Script Variables
-$CurrentVersion = "0.0.7-beta"
+$CurrentVersion = "0.0.8-beta"
 
 # Acceptance Variables
 $AcceptW10Risk = $false
