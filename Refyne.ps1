@@ -20,7 +20,7 @@ $ErrorCount = 0
 $FailedCommands = @()
 
 # Script Variables
-$CurrentVersion = "0.0.8-beta"
+$CurrentVersion = "0.0.9-beta"
 
 # Acceptance Variables
 $AcceptW10Risk = $false
@@ -150,6 +150,7 @@ function Get-ComputerHardwareSpecification {
                 $CleanCPUName = ($CPU | Select-Object -Property Name -First 1).Name -replace '\(R\)', ''
                 $CleanCPUName = $CleanCPUName -replace '\(TM\)', ''
                 $SysProperties = [ordered]@{
+                    "Refyne Version"       = $CurrentVersion
                     "CPU"                  = $CleanCPUName
                     "Current clock speed"  = "$(($CPU | Select-Object -Property CurrentClockSpeed -First 1).CurrentClockSpeed) MHz"
                     "Max clock speed"      = "$(($CPU | Select-Object -Property MaxClockSpeed -First 1).MaxClockSpeed) MHz"

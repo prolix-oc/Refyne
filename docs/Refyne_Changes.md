@@ -185,7 +185,7 @@
 ### System Recovery
 
 ```powershell
-Enable-ComputerRestore -Drive 'C:\', 'D:\', 'E:\', 'F:\', 'G:\'
+Enable-ComputerRestore -Drive 'C:\ D:\ E:\' # The script by default reads all drives, but this is an example command
 Checkpoint-Computer -Description 'RefyneTweaks'
 ```
 
@@ -215,6 +215,7 @@ schtasks /change /disable /tn "NvTmRep_CrashReport4_{B2FE1952-0186-46C3-BAEC-A80
 ```
 
 ### Network
+
 
 ```powershell
 netsh int tcp set supplemental Template=Internet CongestionProvider=bbr2
@@ -249,7 +250,6 @@ bcdedit /set avoidlowmemory 0x8000000
 bcdedit /set nolowmem Yes
 bcdedit /set allowedinmemorysettings 0x0
 bcdedit /set isolatedcontext No
-bcdedit /set useplatformclock Yes
 ```
 
 ### BCD
