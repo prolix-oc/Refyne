@@ -720,15 +720,14 @@ function Set-EnableSystemRecovery {
     PROCESS {
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\SystemRestore" "SystemRestorePointCreationFrequency" "DWord" "0"
         $targets = ""
-        $fsdrive = Get-PSDrive -PSProvider FileSystem 
-        for ($i = 0; $i -lt $fsdrive.Length; $i++) {
-            if ($i -eq ($fsdrive.Length - 1)) {
-                $targets += "'$($fsdrive[$i].Root)'"
-                Write-StatusLine Info "Enabled restore point creation for $($fsdrive[$i].Root)"
-            }
-            else {
-                $targets += "'$($fsdrive[$i].Root)', "
-                Write-StatusLine Info "Enabled restore point creation for $($fsdrive[$i].Root)"
+        $fsdrives = Get-PSDrive -PSProvider FileSystem 
+        foreach($drive in $fsdrives) {
+            if ($drive -eq $testarray[-1]) {
+                $targets += "$($drive.Root)"
+                Write-StatusLine Info "Enabled restore point creation for $($drive.Root)"
+            } else {
+                $targets += "'$($drive.Root)', "
+                Write-StatusLine Info "Enabled restore point creation for $($drive.Root)"
             }
         }
         Read-CommandStatus "Enable-ComputerRestore -Drive $($targets)" "enabled restore for all system drives"
