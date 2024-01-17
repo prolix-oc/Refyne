@@ -242,16 +242,6 @@ Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses ("1.1.1
 Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses ("2606:4700:4700::1111", "2606:4700:4700::1001")
 ```
 
-### BCD for Memory
-
-```powershell
-bcdedit /set firstmegabytepolicy UseAll
-bcdedit /set avoidlowmemory 0x8000000
-bcdedit /set nolowmem Yes
-bcdedit /set allowedinmemorysettings 0x0
-bcdedit /set isolatedcontext No
-```
-
 ### BCD
 
 ```powershell
