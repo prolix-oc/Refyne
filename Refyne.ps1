@@ -937,7 +937,7 @@ function Set-RegistryTweaksAMD {
     }
 
     PROCESS {
-        if ($Card.Contains('Series')) { 
+        if ($script:Card.Contains('Series')) { 
             Clear-Host
             Write-StatusLine info "No applicable tweaks available for pre-Navi/Crimson-based Radeon cards, moving on..."
             Start-Sleep -Seconds 2
