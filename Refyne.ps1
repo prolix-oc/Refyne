@@ -501,24 +501,28 @@ function Undo-SystemChanges {
     )
 
     BEGIN {
-        if (Test-Path )
-        $RegBack = (Get-Content -Path $regfilepath)
-        Write-StatusLine info "Undoing $($RegBack.Length) changes to registry and reverting to stock BCD..."
+        if (Test-Path $RegBack) {
+            $RegBack = (Get-Content -Path $regfilepath)
+            Write-StatusLine info "Undoing $($RegBack.Length) changes to registry and reverting to stock BCD..."
+        } else {
+            Write-StatusLine warn "No registry backup captured, exiting..."
+            Start-Sleep -Seconds 2
+            exit
+        }
     }
 
     PROCESS {
         for ($i=0;$i -lt $RegBack.Length;$i++) {
-            $PathKeyArr =$InputString.Split(";")
-            foreach ($param in $PathKeyArr) {
-                if (-NOT ($param[2] -eq "Binary")) {}
-                Write-RegistryKey "$($param[0])" "$($param[1])" "$($param[2])" "$($param[3])"
-                Write-StatusLine info "Reset value for $($param[1]) to default settings."
+            $PathKeyArr =$(RegBack[$i]).Split(";")
+            if (-NOT ($param[2] -eq 'Binary')) {
+                 Write-RegistryKey "$($PathKeyArr[0])" "$($PathKeyArr[1])" "$($PathKeyArr[2])" "$($PathKeyArr[3])"
+                Write-StatusLine info "Reset value for $($PathKeyArr[1]) to default settings."
             } else {
-                Write-BinaryRegistry "$($param[0])" "$($param[1])" "$($param[3])"
-                Write-StatusLine info "Reset value for $($param[1]) to default settings."
+                Write-BinaryRegistry "$($PathKeyArr[0])" "$($PathKeyArr[1])" "$($PathKeyArr[3])"
+                Write-StatusLine info "Reset value for $($PathKeyArr[1]) to default settings."
             }
-            $cmdstring = 'bcdedit /import "{0}"' -f $bcdfilepath
-            Read-CommandStatus $cmdstring "backing up BCD storage device."
+        $cmdstring = 'bcdedit /import "{0}"' -f $bcdfilepath
+        Read-CommandStatus $cmdstring "restoring default BCD storage device."
         }
     }
 
@@ -683,7 +687,18 @@ function Set-EnableSystemRecovery {
     
     PROCESS {
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\SystemRestore" "SystemRestorePointCreationFrequency" "DWord" "0"
-        Read-CommandStatus "Enable-ComputerRestore -Drive 'C:\', 'D:\', 'E:\', 'F:\', 'G:\'" "Pre-Optimization Restore Point."
+        $targets = ""
+        $fsdrive = Get-PSDrive -PSProvider FileSystem 
+        for ($i=0;$i -lt $fsdrive.Length; $i++) {
+            if ($i -eq ($fsdrive.Length - 1)) {
+                $targets += "'$($fsdrive[$i].Root)'"
+                Write-StatusLine "info" "Enabled restore point creation for $($fsdrive[$i].Root)"
+            } else {
+                $targets += "'$($fsdrive[$i].Root)', "
+                Write-StatusLine "info" "Enabled restore point creation for $($fsdrive[$i].Root)"
+            }
+        }
+        Read-CommandStatus "Enable-ComputerRestore -Drive $($targets)" "enabled restore for all system drives"
         Write-StatusLine "info" "Making a restore point for this system..."
         Read-CommandStatus "Checkpoint-Computer -Description 'RefyneTweaks'" "created a restore point pre-Refyne"
     }
@@ -1174,7 +1189,7 @@ function Write-MainMenuStart {
         if ($OSVersion -like "*Windows 11*") {
             Write-ColorOutput -InputObject  "You're currently running $($OSVersion)! Nice, let's get started." -ForegroundColor Green
             Write-ColorOutput -InputObject "`nOptions:`n" -ForegroundColor DarkGray
-            if (Test-Path $ -PathType Leaf)Write-ColorOutput -InputObject "[1] Run Prolix Tweaks                [5] Revert Changes" -ForegroundColor Gray
+            if (Test-Path $regfilepath -PathType Leaf) { Write-ColorOutput -InputObject "[1] Run Prolix Tweaks                [5] Revert Changes" -ForegroundColor Gray}
             Write-ColorOutput -InputObject "[2] Generate System Report           [6] Exit" -ForegroundColor Gray
             Write-ColorOutput -InputObject "[3] Optimize PowerShell" -ForegroundColor Gray
             Write-ColorOutput -InputObject "[4] Activate Windows" -ForegroundColor Gray
