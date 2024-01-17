@@ -34,9 +34,7 @@ flowchart TD
     subgraph Execution
     direction LR
         MA[Set-EnableSystemRecovery]
-        MB[Set-BCDTweaksMem]
         MC[Set-BCDTweaks]
-        MD[Write-MemTweakWarning]
         ME[Set-Tweaks]
     end
 
@@ -62,7 +60,6 @@ flowchart TD
 
         Stage --> Recovery
         Stage --> BCD
-        Stage --> Memory
         Stage --> Registry
         Stage --> GPU
         Stage --> Network
@@ -78,7 +75,6 @@ flowchart TD
         v2[FailedCommands]
         v3[CurrentVersion]
         v4[AcceptW10Risk]
-        v5[AcceptMemRisk]
         v6[AcceptTweaksRisk]
         v7[TerminalWindowWidth]
         v8[OSVersion]
@@ -105,7 +101,6 @@ flowchart TD
         f5[Write-StatusLine]
         f6[Write-Windows10Warning]
         f7[Write-LegacyWindowsWarning]
-        f8[Write-MemTweakWarning]
         f9[Write-RisksWarning]
         f10[Get-UserIntent]
         f11[Read-CommandStatus]
@@ -118,7 +113,6 @@ flowchart TD
         f17[Remove-RegistryKey]
         f16[Set-EnableSystemRecovery]
         f17[Set-BCDTweaks]
-        f18[Set-BCDTweaksMem]
         f19[Set-Tweaks]
         f20[Read-GPUManual]
         f21[Set-RegistryTweaksNVIDIA]
