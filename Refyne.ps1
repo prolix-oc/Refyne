@@ -530,7 +530,7 @@ function Undo-SystemChanges {
                 Write-BinaryRegistry "$($PathKeyArr[0])" "$($PathKeyArr[1])" "$($PathKeyArr[3])"
                 Write-StatusLine info "Reset value for $($PathKeyArr[1]) to default settings."
             }
-            $cmdstring = 'bcdedit /import "{0}"' -f $bcdfilepath
+            $cmdstring = 'bcdedit /import "{0}"' -f $BCDBackupPath
             Read-CommandStatus $cmdstring "restoring default BCD storage device."
         }
     }
