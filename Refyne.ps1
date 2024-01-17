@@ -993,43 +993,47 @@ function Set-RegistryTweaksAMD {
     PROCESS {
         if ($Card.Contains('Series')) { 
             Clear-Host
+            Write-StatusLine info "No applicable tweaks available for pre-Navi/Crimson-based Radeon cards, moving on..."
+            Start-Sleep -Seconds 2
             Set-RegistryTweaksInterrupts
+        } else {
+            foreach ($regline in $AMDRegistryPath) {
+                $line = Convert-RegistryPath $regline
+                Write-RegistryKey "$($line)" "3to2Pulldown_NA" "DWord" "0"
+                Write-RegistryKey "$($line)" "Adaptive De-interlacing" "DWord" "1"
+                Write-RegistryKey "$($line)" "AllowRSOverlay" "String" "false"
+                Write-RegistryKey "$($line)" "AllowSkins" "String" "false"
+                Write-RegistryKey "$($line)" "AllowSnapshot" "DWord" "0"
+                Write-RegistryKey "$($line)" "AllowSubscription" "DWord" "0"
+                Write-RegistryKey "$($line)" "AutoColorDepthReduction_NA" "DWord" "0"
+                Write-RegistryKey "$($line)" "DisableSAMUPowerGating" "DWord" "1"
+                Write-RegistryKey "$($line)" "DisableUVDPowerGatingDynamic" "DWord" "1"
+                Write-RegistryKey "$($line)" "DisableVCEPowerGating" "DWord" "1"
+                Write-RegistryKey "$($line)" "EnableAspmL0s" "DWord" "0"
+                Write-RegistryKey "$($line)" "EnableAspmL1" "DWord" "0"
+                Write-RegistryKey "$($line)" "EnableUlps" "DWord" "0"
+                Write-RegistryKey "$($line)" "KMD_DeLagEnabled" "DWord" "1"
+                Write-RegistryKey "$($line)" "EnableUlps_NA" "String" "0"
+                Write-RegistryKey "$($line)" "KMD_FRTEnabled" "Dword" "0"
+                Write-RegistryKey "$($line)" "DisableDMACopy" "DWord" "1"
+                Write-RegistryKey "$($line)" "DisableBlockWrite" "DWord" "0"
+                Write-RegistryKey "$($line)" "StutterMode" "DWord" "0"
+                Write-RegistryKey "$($line)" "EnableUlps" "DWord" "0"
+                Write-RegistryKey "$($line)" "PP_SclkDeepSleepDisable" "DWord" "1"
+                Write-RegistryKey "$($line)" "PP_ThermalAutoThrottlingEnable" "DWord" "0"
+                Write-RegistryKey "$($line)" "DisableDrmdmaPowerGating" "DWord" "1"
+                Write-RegistryKey "$($line)" "KMD_EnableComputePreemption" "DWord" "0"
+                Write-RegistryKey "$($line)\UMD" "Main3D_DEF" "String" "1"
+                Write-BinaryRegistry "$($line)\UMD" "Main3D" ([byte[]](0x32, 0x00))
+                Write-BinaryRegistry "$($line)\UMD" "ShaderCache" ([byte[]](0x32, 0x00))
+                Write-BinaryRegistry "$($line)\UMD" "Tessellation_OPTION" ([byte[]](0x32, 0x00))
+                Write-BinaryRegistry "$($line)\UMD" "Tessellation" ([byte[]](0x31, 0x00))
+                Write-BinaryRegistry "$($line)\UMD" "VSyncControl" ([byte[]](0x30, 0x00))
+                Write-BinaryRegistry "$($line)\UMD" "TFQ" ([byte[]](0x32, 0x00))
+                Write-RegistryKey "$($line)\UMD" "3D_Refresh_Rate_Override_DEF" "DWord" "0"
+            }
         }
-        foreach ($regline in $AMDRegistryPath) {
-            $line = Convert-RegistryPath $regline
-            Write-RegistryKey "$($line)" "3to2Pulldown_NA" "DWord" "0"
-            Write-RegistryKey "$($line)" "Adaptive De-interlacing" "DWord" "1"
-            Write-RegistryKey "$($line)" "AllowRSOverlay" "String" "false"
-            Write-RegistryKey "$($line)" "AllowSkins" "String" "false"
-            Write-RegistryKey "$($line)" "AllowSnapshot" "DWord" "0"
-            Write-RegistryKey "$($line)" "AllowSubscription" "DWord" "0"
-            Write-RegistryKey "$($line)" "AutoColorDepthReduction_NA" "DWord" "0"
-            Write-RegistryKey "$($line)" "DisableSAMUPowerGating" "DWord" "1"
-            Write-RegistryKey "$($line)" "DisableUVDPowerGatingDynamic" "DWord" "1"
-            Write-RegistryKey "$($line)" "DisableVCEPowerGating" "DWord" "1"
-            Write-RegistryKey "$($line)" "EnableAspmL0s" "DWord" "0"
-            Write-RegistryKey "$($line)" "EnableAspmL1" "DWord" "0"
-            Write-RegistryKey "$($line)" "EnableUlps" "DWord" "0"
-            Write-RegistryKey "$($line)" "KMD_DeLagEnabled" "DWord" "1"
-            Write-RegistryKey "$($line)" "EnableUlps_NA" "String" "0"
-            Write-RegistryKey "$($line)" "KMD_FRTEnabled" "Dword" "0"
-            Write-RegistryKey "$($line)" "DisableDMACopy" "DWord" "1"
-            Write-RegistryKey "$($line)" "DisableBlockWrite" "DWord" "0"
-            Write-RegistryKey "$($line)" "StutterMode" "DWord" "0"
-            Write-RegistryKey "$($line)" "EnableUlps" "DWord" "0"
-            Write-RegistryKey "$($line)" "PP_SclkDeepSleepDisable" "DWord" "1"
-            Write-RegistryKey "$($line)" "PP_ThermalAutoThrottlingEnable" "DWord" "0"
-            Write-RegistryKey "$($line)" "DisableDrmdmaPowerGating" "DWord" "1"
-            Write-RegistryKey "$($line)" "KMD_EnableComputePreemption" "DWord" "0"
-            Write-RegistryKey "$($line)\UMD" "Main3D_DEF" "String" "1"
-            Write-BinaryRegistry "$($line)\UMD" "Main3D" ([byte[]](0x32, 0x00))
-            Write-BinaryRegistry "$($line)\UMD" "ShaderCache" ([byte[]](0x32, 0x00))
-            Write-BinaryRegistry "$($line)\UMD" "Tessellation_OPTION" ([byte[]](0x32, 0x00))
-            Write-BinaryRegistry "$($line)\UMD" "Tessellation" ([byte[]](0x31, 0x00))
-            Write-BinaryRegistry "$($line)\UMD" "VSyncControl" ([byte[]](0x30, 0x00))
-            Write-BinaryRegistry "$($line)\UMD" "TFQ" ([byte[]](0x32, 0x00))
-            Write-RegistryKey "$($line)\UMD" "3D_Refresh_Rate_Override_DEF" "DWord" "0"
-        }
+        
     }
 
     END {
