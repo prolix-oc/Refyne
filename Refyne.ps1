@@ -39,6 +39,7 @@ $WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion
 $AMDRegistryPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $NVIDIARegistryPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $Card = ""
+$Cpu = ""
 
 # Memory
 $TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
@@ -148,7 +149,8 @@ function Get-ComputerHardwareSpecification {
                 $GpuDriver = (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name DriverDate -ErrorAction SilentlyContinue)."DriverDate"
                 $VRAM = [math]::round($qwMemorySize / 1GB)
                 $CleanCPUName = ($CPU | Select-Object -Property Name -First 1).Name -replace '\(R\)', ''
-                $CleanCPUName = $CleanCPUName -replace '\(TM\)', ''
+                $CleanCPUName = $CleanCPUName -replace '\(TM\)', '' 
+                $CPU = $CleanCPUName
                 $SysProperties = [ordered]@{
                     "Refyne Version"       = $CurrentVersion
                     "CPU"                  = $CleanCPUName
@@ -776,6 +778,7 @@ function Set-BCDTweaks {
         Read-CommandStatus 'bcdedit /set increaseuserva 268435328' "set virtual memory allocation" 
         Read-CommandStatus 'bcdedit /set nx OptIn' "enable NX bit" 
         Read-CommandStatus 'bcdedit /set hypervisorlaunchtype off' "Disable Hypervisor" 
+        Read-CommandStatus 'bcdedit /set isolatedcontext No' 'disable Hypervisor jailed memory context'
     }
     
     END {
@@ -787,34 +790,6 @@ function Set-BCDTweaks {
             Clear-Host
             Show-DisclosureError BCD
         } 
-    }
-}
-
-function Set-BCDTweaksMem {
-    [CmdletBinding()]
-    PARAM ( ) # No parameters
-
-    BEGIN {
-        Write-StatusLine Info "Applying tweaks to Boot Configuration Device involving memory..."
-    }
-
-    PROCESS {
-        Read-CommandStatus 'bcdedit /set firstmegabytepolicy UseAll' "Set command address buffer range"
-        Read-CommandStatus 'bcdedit /set avoidlowmemory 0x8000000' "set uncontiguous memory address range"
-        Read-CommandStatus 'bcdedit /set nolowmem Yes' "disable low-memory condition checks"
-        Read-CommandStatus 'bcdedit /set allowedinmemorysettings 0x0' "disable SGX in-memory context"
-        Read-CommandStatus 'bcdedit /set isolatedcontext No' 'disable kernel memory checks (mitigations)'
-    }
-
-    END {
-        if ($script:ErrorCount -lt 1) {
-            Clear-Host
-            Set-Tweaks
-        }
-        else {
-            Clear-Host
-            Show-DisclosureError Memory
-        }
     }
 }
 
