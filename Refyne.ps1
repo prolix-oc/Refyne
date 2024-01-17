@@ -21,8 +21,6 @@ $CurrentVersion = "0.0.7-beta"
 [bool]$AcceptW10Risk = $false
 [bool]$AcceptMemRisk = $false
 [bool]$AcceptTweaksRisk = $false
-[bool]$RegBackupCaptured = $false
-[bool]$BCDBackupCaptured = $false
 [int]$TerminalWindowWidth = 0
 $TerminalWindowWidth = [int][System.Math]::Round($Host.UI.RawUI.WindowSize.Width / 2, [System.MidpointRounding]::AwayFromZero)
 $Card = ""
@@ -32,6 +30,9 @@ $AmdRegPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-
 $NvRegPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
 $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+$logfilepath = "C:\Refyne\logfile-$($timestamp).txt"
+$regfilepath = "C:\Refyne\resources\regedits.bak"
+$bcdfilepath = "C:\Refyne\resources\backup.bcd"
 $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
 # -----------------------------------------------------------------
@@ -494,6 +495,37 @@ function Read-CommandStatus {
 # Main Functions
 # -----------------------------------------------------------------
 
+function Undo-SystemChanges {
+    [CmdletBinding()]
+    PARAM (
+    )
+
+    BEGIN {
+        if (Test-Path )
+        $RegBack = (Get-Content -Path $regfilepath)
+        Write-StatusLine info "Undoing $($RegBack.Length) changes to registry and reverting to stock BCD..."
+    }
+
+    PROCESS {
+        for ($i=0;$i -lt $RegBack.Length;$i++) {
+            $PathKeyArr =$InputString.Split(";")
+            foreach ($param in $PathKeyArr) {
+                if (-NOT ($param[2] -eq "Binary")) {}
+                Write-RegistryKey "$($param[0])" "$($param[1])" "$($param[2])" "$($param[3])"
+                Write-StatusLine info "Reset value for $($param[1]) to default settings."
+            } else {
+                Write-BinaryRegistry "$($param[0])" "$($param[1])" "$($param[3])"
+                Write-StatusLine info "Reset value for $($param[1]) to default settings."
+            }
+            $cmdstring = 'bcdedit /import "{0}"' -f $bcdfilepath
+            Read-CommandStatus $cmdstring "backing up BCD storage device."
+        }
+    }
+
+    END {
+        Write-EndMenuStart
+    }
+}
 function Write-LogEntry {
     [CmdletBinding()]
     PARAM (
@@ -506,7 +538,7 @@ function Write-LogEntry {
     }
 
     PROCESS {
-        Write-Output -InputObject "$bodytimestamp" >> C:\Refyne\logfile-$timestamp.txt
+        Write-Output -InputObject "$bodytimestamp" >> $logfilepath
     }
 }
 
@@ -520,8 +552,9 @@ function Backup-BCDStorage {
     }
 
     PROCESS {
-        if (!$script:BCDBackupCaptured) {
-            Read-CommandStatus 'bcdedit /export "C:\Refyne\resources\backup.bcd"' "backing up BCD storage device."
+        if (-NOT (Test-Path $bcdfilepath)) {
+            $cmdstring = 'bcdedit /export "{0}"' -f $bcdfilepath
+            Read-CommandStatus $cmdstring "backing up BCD storage device."
         } else {
             Write-StatusLine Info "Already have a backup saved, moving on..."
         }
@@ -543,9 +576,9 @@ function Backup-RegistryPathKey {
     }
 
     PROCESS {
-        if (!$script:RegBackupCaptured) {
+        if (-NOT (Test-Path $regfilepath)) {
             $Value = (Get-ItemProperty -Path "$regpath" -Name "$regkey" | Select-Object -First 1).$regkey
-            Write-Output -InputObject "$($regpath);$($regkey);$($proptype);$($Value)" >> C:\Refyne\resources\regedits.bak
+            Write-Output -InputObject "$($regpath);$($regkey);$($proptype);$($Value)" >> $regfilepath
             Write-StatusLine Info "Backing up default value for $regkey..."
         } else {
             Write-StatusLine Info "Already captured registry backup, moving on..."
@@ -1123,14 +1156,9 @@ function Write-MainMenuStart {
     PARAM ( ) # No parameters
 
     BEGIN {
-        New-Item C:\Refyne\logfile-$timestamp.txt -ItemType File -Force
-        if (!(Test-Path C:\Refyne\resources\regedits.bak)) {
-            New-Item -Path C:\Refyne\resources\regedits.bak -ItemType File -Force
-            $script:RegBackupCaptured = $false
-            $script:BCDBackupCaptured = $false
-        } else {
-            $script:RegBackupCaptured = $true
-            $script:BCDBackupCaptured = $true
+        New-Item $logfilepath -ItemType File -Force
+        if (-NOT (Test-Path $regfilepath)) {
+            New-Item -Path $regfilepath -ItemType File -Force
         }
         Write-LogEntry "Starting Refyne..."
         Clear-Host
@@ -1141,16 +1169,15 @@ function Write-MainMenuStart {
 
     PROCESS {
         $specs = Get-ComputerHardwareSpecification | Format-Table -AutoSize -Property Name, Value
-        $specs >> C:\Refyne\logfile-$timestamp.txt
+        $specs >> $logfilepath
         $specs
         if ($OSVersion -like "*Windows 11*") {
             Write-ColorOutput -InputObject  "You're currently running $($OSVersion)! Nice, let's get started." -ForegroundColor Green
             Write-ColorOutput -InputObject "`nOptions:`n" -ForegroundColor DarkGray
-            Write-ColorOutput -InputObject "[1] Run Prolix Tweaks" -ForegroundColor Gray
-            Write-ColorOutput -InputObject "[2] Generate System Report" -ForegroundColor Gray
+            if (Test-Path $ -PathType Leaf)Write-ColorOutput -InputObject "[1] Run Prolix Tweaks                [5] Revert Changes" -ForegroundColor Gray
+            Write-ColorOutput -InputObject "[2] Generate System Report           [6] Exit" -ForegroundColor Gray
             Write-ColorOutput -InputObject "[3] Optimize PowerShell" -ForegroundColor Gray
             Write-ColorOutput -InputObject "[4] Activate Windows" -ForegroundColor Gray
-            Write-ColorOutput -InputObject "[5] Exit`n" -ForegroundColor Gray
 
             $Choice = Show-Prompt "Enter number choice here"
             if ($Choice -eq "1") {
@@ -1171,6 +1198,12 @@ function Write-MainMenuStart {
                 Read-CommandStatus "irm https://massgrave.dev/get | iex" "activate Windows using MAS (https://github.com/massgravel/Microsoft-Activation-Scripts) <3"
             }
             elseif ($Choice -eq "5") {
+                Clear-Host
+                Undo-SystemChanges
+                Start-Sleep -Seconds 2
+                exit
+            }
+            elseif ($Choice -eq "6") {
                 Clear-Host
                 Write-ColorOutput -InputObject "Exiting..." -ForegroundColor Green
                 Start-Sleep -Seconds 2
