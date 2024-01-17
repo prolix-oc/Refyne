@@ -80,7 +80,7 @@ flowchart TD
         v8[OSVersion]
         v9[WindowsVersion]
         v12[Card]
-        v13[CleanCPUName]
+        v163[CleanCPUName]
         v13[TotalMemory]
         v14[TimeStamp]
         v15[LogFilePath]
