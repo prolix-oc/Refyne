@@ -39,7 +39,7 @@ $WindowsVersion = if ($OSVersion -like "*Windows 11*") { 11 } elseif ($OSVersion
 $AMDRegistryPath = "HKLM:\System\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $NVIDIARegistryPath = "HKLM\System\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}"
 $Card = ""
-$Cpu = ""
+$CleanCPUName = ""
 
 # Memory
 $TotalMemory = (Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).sum / 1gb
@@ -150,7 +150,6 @@ function Get-ComputerHardwareSpecification {
                 $VRAM = [math]::round($qwMemorySize / 1GB)
                 $CleanCPUName = ($CPU | Select-Object -Property Name -First 1).Name -replace '\(R\)', ''
                 $CleanCPUName = $CleanCPUName -replace '\(TM\)', '' 
-                $CPU = $CleanCPUName
                 $SysProperties = [ordered]@{
                     "Refyne Version"       = $CurrentVersion
                     "CPU"                  = $CleanCPUName
@@ -702,7 +701,7 @@ function Set-EnableSystemRecovery {
         $targets = ""
         $fsdrives = Get-PSDrive -PSProvider FileSystem 
         foreach($drive in $fsdrives) {
-            if ($drive -eq $testarray[-1]) {
+            if ($drive -eq $fsdrives[-1]) {
                 $targets += "$($drive.Root)"
                 Write-StatusLine Info "Enabled restore point creation for $($drive.Root)"
             } else {
