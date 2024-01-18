@@ -88,10 +88,11 @@ Function Convert-RegistryPath {
         $Encoding = "utf8"
     )
 
-    Begin {
-    }
-    Process {
+    BEGIN {
         $grabString = $path.ToString()
+    }
+
+    PROCESS {
         switch -Wildcard ($grabString) {
             'HKEY_LOCAL_MACHINE*' { $grabString -replace ("HKEY_LOCAL_MACHINE\\", "HKLM:\") }
             'HKEY_CURRENT_USER*' { $grabString -replace ("HKEY_CURRENT_USER\\", "HKCU:\") }
