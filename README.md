@@ -10,10 +10,12 @@
 </div>
 
 <div align="center">
-  <img alt="Static Badge" src="https://img.shields.io/badge/TikTok-Follow?style=for-the-badge&logo=tiktok&color=222222&link=https%3A%2F%2Ftiktok.com%2F%40prolix_oc" href="https://tiktok.com/@prolix_oc">
-  <img alt="Static Badge" src="https://img.shields.io/badge/Twitch-Follow?style=for-the-badge&logo=twitch&color=222222&link=https%3A%2F%2Ftwitch.tv%2Fprolix_gg" href="https://twitch.tv/prolix_gg">
-  <img alt="Static Badge" src="https://img.shields.io/badge/Formerly%20Twitter-Follow?style=for-the-badge&logo=X&color=222222&link=https%3A%2F%2Ftwitter.com%2Fprolix_gg" href="https://x.com/prolix_gg">
-  <img alt="Static Badge" src="https://img.shields.io/badge/Discord-Join?style=for-the-badge&logo=discord&color=222222&link=https%3A%2F%2Fdiscord.gg%2FffW3vCpGud" href="https://discord.gg/ffW3vCpGud">
+  
+  [<img src="https://img.shields.io/badge/TikTok-Follow?style=for-the-badge&logo=tiktok&color=222222">](https://tiktok.com/@prolix_oc)
+  [<img src="https://img.shields.io/badge/Twitch-Follow?style=for-the-badge&logo=twitch&color=222222">](https://twitch.tv/prolix_gg)
+  [<img src="https://img.shields.io/badge/Formerly%20Twitter-Follow?style=for-the-badge&logo=X&color=222222">](https://x.com/prolix_gg)
+  [<img src="https://img.shields.io/badge/Discord-Join?style=for-the-badge&logo=discord&color=222222">](https://discord.gg/ffW3vCpGud)
+  
 </div>
 
 <h4 align="center"> "Refyne" is a script designed to refine your system fully for multitasking, gaming, programming, multimedia, and more. </h4>
@@ -89,11 +91,13 @@ You can file a pull request, or reach out to me to discuss any potential tweaks 
 Only if you're willing! I accept tips via PayPal, Stripe and Cash App. I will also force Luke to take a portion of these tips, somehow or some way.
 
 
-<p align="center">
-  <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_Cashapp-Thanks?style=for-the-badge&logo=cashapp&color=C1C6C3&link=https%3A%2F%2Fcash.app%2F%24ProlixOCs" href="https://cash.app/$ProlixOCs">
-  <img src="https://img.shields.io/badge/Tip_me_on_Stripe-Thanks?style=for-the-badge&logo=stripe&color=A6F8D3" href="https://pay.prolix.live/b/dR6cQqajD6Ghg1i8wx">
-  <img alt="Static Badge" src="https://img.shields.io/badge/Tip_me_on_PayPal-Thanks?style=for-the-badge&logo=paypal&color=B0CDE1&link=https%3A%2F%2Fpaypal.me%2Fprolixgg" href="https://paypal.me/prolixgg">
-</p>
+<div align="center">
+
+[<img src="https://img.shields.io/badge/$ProlixOCs-Cash%2520App?style=for-the-badge&logo=cashapp&logoColor=white&label=Cash%20App&labelColor=308838&color=white">](https://cash.app/$ProlixOCs)
+[<img src="https://img.shields.io/badge/prolixgg-Paypal?style=for-the-badge&logo=paypal&logoColor=white&label=PayPal&labelColor=blue&color=white">](https://paypal.me/prolixgg)
+[<img src="https://img.shields.io/badge/Prolix.live-Stripe?style=for-the-badge&logo=stripe&logoColor=white&label=Stripe&labelColor=308838&color=white">](https://pay.prolix.live/b/dR6cQqajD6Ghg1i8wx)
+
+</div>
 
 ---
 
