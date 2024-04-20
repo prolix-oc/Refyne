@@ -20,7 +20,7 @@ $ErrorCount = 0
 $FailedCommands = @()
 
 # Script Variables
-$CurrentVersion = "0.1.0-beta"
+$CurrentVersion = "0.1.1-beta"
 
 # Acceptance Variables
 $AcceptW10Risk = $false
@@ -690,7 +690,7 @@ function Set-EnableSystemRecovery {
     }
     
     PROCESS {
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows` NT\CurrentVersion\SystemRestore" "SystemRestorePointCreationFrequency" "DWord" "0"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\SystemRestore" "SystemRestorePointCreationFrequency" "DWord" "0"
         $targets = ""
         $fsdrives = Get-PSDrive -PSProvider FileSystem 
         foreach ($drive in $fsdrives) {
@@ -737,16 +737,16 @@ function Set-BCDTweaks {
         Read-CommandStatus 'bcdedit /set useplatformclock no' "disable use of platform clock-source"
         Read-CommandStatus 'bcdedit /set usefirmwarepcisettings no' "disable BIOS PCI device mapping"
         Read-CommandStatus 'bcdedit /set usephysicaldestination no' "disable physical APIC device mapping"
-        Read-CommandStatus 'bcdedit /set MSI Default' "defaulte all devices to Messaged-signal Interrutps"
-        Read-CommandStatus 'bcdedit /set configaccesspolicy Default' "defaulte memory mapping policy"
-        Read-CommandStatus 'bcdedit /set x2apicpolicy Enable' "enable modern APIC policy"
+        Read-CommandStatus 'bcdedit /set MSI Default' "default all devices to Messaged-signal Interrutps" # Can potentially cause issues with some hardware configurations
+        Read-CommandStatus 'bcdedit /set configaccesspolicy Default' "default memory mapping policy"
+        Read-CommandStatus 'bcdedit /set x2apicpolicy Enable' "enable modern APIC policy" # x2 is the preferred usage for modern systems, see -> https://wiki.osdev.org/APIC
         Read-CommandStatus 'bcdedit /set vm Yes' "disable virtualization"
         Read-CommandStatus 'bcdedit /set vsmlaunchtype Off' "disable Virtual Secure Mode" 
-        Read-CommandStatus 'bcdedit /deletevalue uselegacyapicmode' "disable legacy APIC methods" 
-        Read-CommandStatus 'bcdedit /set tscsyncpolicy Enhanced' "set TSC sync policy" 
+        Read-CommandStatus 'bcdedit /deletevalue uselegacyapicmode' "disable legacy APIC methods"
+        Read-CommandStatus 'bcdedit /set tscsyncpolicy Enhanced' "set TSC sync policy" # Synchonizes per-core TSC values
         Read-CommandStatus 'bcdedit /set linearaddress57 OptOut' "disable 57-bit linear addressing" 
-        Read-CommandStatus 'bcdedit /set increaseuserva 268435328' "set virtual memory allocation" 
-        Read-CommandStatus 'bcdedit /set nx OptIn' "enable NX bit" 
+        # Read-CommandStatus 'bcdedit /set increaseuserva 268435328' "set virtual memory allocation" No idea why this was configured in the first place, we're not in PM.
+        Read-CommandStatus 'bcdedit /set nx OptIn' "enable NX bit" # Used for DEP
         Read-CommandStatus 'bcdedit /set hypervisorlaunchtype off' "Disable Hypervisor" 
         Read-CommandStatus 'bcdedit /set isolatedcontext No' 'disable Hypervisor jailed memory context'
     }
@@ -790,7 +790,6 @@ function Set-Tweaks {
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\GpuEnergyDr" "Start" "DWord" "2"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control" "SvcHostSplitThresholdInKB" "DWord" "$($osMemory)"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\kernel" "GlobalTimerResolutionRequests" "DWord" "1"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "LargeSystemCache" "DWord" "1"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Power" "HiberbootEnabled" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager" "HeapDeCommitFreeBlockThreshold" "DWord" "262144"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\FileSystem\" "LongPathsEnabled" "DWord" "0"
@@ -800,8 +799,8 @@ function Set-Tweaks {
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\CrashControl" "DisplayParameters" "DWord" "1"
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\AppCompat" "AITEnable" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\GraphicsDrivers" "DpiMapIommuContiguous" "DWord" "1"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "DisablePagingExecutive " "DWord" "1"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "LargeSystemCache " "DWord" "1"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "DisablePagingExecutive" "DWord" "1"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "LargeSystemCache" "DWord" "1"
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" "Value" "String" "Deny"
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\DataCollection" "AllowTelemetry" "DWord" "0"
         Write-RegistryKey "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" "ContentDeliveryAllowed" "DWord" "0"
@@ -819,7 +818,7 @@ function Set-Tweaks {
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\System" "UploadUserActivities" "DWord" "0"
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\DataCollection" "AllowTelemetry" "DWord" "0"
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\CloudContent" "DisableSoftLanding" "DWord" "1"
-        Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Reliability" "TimeStampInterval " "DWord" "0"
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Reliability" "TimeStampInterval" "DWord" "0"
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Sensor\Overrides\{BFA794E4-F964-4FDB-90F6-51056BFE4B44}" "SensorPermissionState" "DWord" "0"
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\csrss.exe\PerfOptions" "CpuPriorityClass" "DWord" "4"
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\csrss.exe\PerfOptions" "IoPriority" "DWord" "3"
@@ -838,6 +837,12 @@ function Set-Tweaks {
         Write-RegistryKey "HKLM:\System\Maps" "AutoUpdateEnabled" "DWord" "0"
         Write-RegistryKey "HKCU:\Software\Microsoft\GameBar" "AllowAutoGameMode" "DWord" "1"
         Write-RegistryKey "HKCU:\Software\Microsoft\GameBar" "AutoGameModeEnabled" "DWord" "1"
+        Write-RegistryKey "HKLM:\Software\Policies\Microsoft\EMET\SysSettings" "SEHOP" "DWord" "3" # https://admx.help/?Category=EMET&Policy=Microsoft.Policies.EMET::SEHOP
+        Write-RegistryKey "HKLM:\SOFTWARE\Policies\Microsoft\InputPersonalization" "RestrictImplicitTextCollection" "DWord" "1"
+        Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\StorageHealth" "AllowDiskHealthModelUpdates" "DWord" "0"
+        Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\AdvertisingInfo" "DisabledByGroupPolicy" "DWord" "1"
+        Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\Group Policy\{35378EAC-683F-11D2-A89A-00C04FBBCFA2}" "NoBackgroundPolicy" "DWord" "1"
+        Write-RegistryKey "Software\Microsoft\Windows\CurrentVersion\Policies\System" "DisableBkGndGroupPolicy" "DWord" "1" # Prevents background group policy processing
         Remove-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace_41040327\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}" $false "" "Removed Gallery shortcut from explorer"
         Read-CommandStatus "fsutil behavior set disable8dot3 1" "disabled 8.3 legacy file system"
         Read-CommandStatus "fsutil behavior set disabledeletenotify 0" "forced TRIM enabled"
@@ -1098,6 +1103,7 @@ function Set-NetworkTweaks {
             Write-RegistryKey "$($line)" "DisableIPSourceRouting" "DWord" "1" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_DisableIPSourceRouting      
         }
 
+        # TCP Congestion Provider, not scalable for all users - please use Windows 11.
         if ($WindowsVersion -eq 11) {
             Read-CommandStatus "netsh int tcp set supplemental Template=Internet CongestionProvider=bbr2" "Enabled BBRv2 for general traffic"
             Read-CommandStatus "netsh int tcp set supplemental Template=Datacenter CongestionProvider=bbr2" "Enabled BBRv2 for datacenter traffic"
@@ -1112,6 +1118,7 @@ function Set-NetworkTweaks {
             Read-CommandStatus "netsh int tcp set supplemental Template=DatacenterCustom CongestionProvider=NewReno" "Enabled New-Reno for custom datacenter traffic"
             Read-CommandStatus "netsh int tcp set supplemental Template=InternetCustom CongestionProvider=NewReno" "Enabled New-Reno for custom general traffic"
         }
+        # Forcing DNS to Cloudflare's, generally faster and more secure compared to ISP's DNS - overridable by user
         Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses ("1.1.1.1", "1.0.0.1")
         Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses ("2606:4700:4700::1111", "2606:4700:4700::1001")
     }
