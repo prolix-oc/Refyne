@@ -1102,25 +1102,6 @@ function Set-NetworkTweaks {
             Write-RegistryKey "$($line)" "EnableDeadGWDetect" "DWord" "0" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_EnableDeadGWDetect
             Write-RegistryKey "$($line)" "DisableIPSourceRouting" "DWord" "1" # TCP Hardening -> https://admx.help/?Category=security-compliance-toolkit&Policy=Microsoft.Policies.MSS::Pol_MSS_DisableIPSourceRouting      
         }
-
-        # TCP Congestion Provider, not scalable for all users - please use Windows 11.
-        if ($WindowsVersion -eq 11) {
-            Read-CommandStatus "netsh int tcp set supplemental Template=Internet CongestionProvider=bbr2" "Enabled BBRv2 for general traffic"
-            Read-CommandStatus "netsh int tcp set supplemental Template=Datacenter CongestionProvider=bbr2" "Enabled BBRv2 for datacenter traffic"
-            Read-CommandStatus "netsh int tcp set supplemental Template=Compat CongestionProvider=bbr2" "Enabled BBRv2 for compatibility traffic"
-            Read-CommandStatus "netsh int tcp set supplemental Template=DatacenterCustom CongestionProvider=bbr2" "Enabled BBRv2 for custom datacenter traffic"
-            Read-CommandStatus "netsh int tcp set supplemental Template=InternetCustom CongestionProvider=bbr2" "Enabled BBRv2 for custom general traffic"
-        }
-        else {
-            Read-CommandStatus "netsh int tcp set supplemental Template=Internet CongestionProvider=NewReno" "Enabled New-Reno for general traffic"
-            Read-CommandStatus "netsh int tcp set supplemental Template=Datacenter CongestionProvider=NewReno" "Enabled New-Reno for datacenter traffic"
-            Read-CommandStatus "netsh int tcp set supplemental Template=Compat CongestionProvider=NewReno" "Enabled New-Reno for compatibility traffic"
-            Read-CommandStatus "netsh int tcp set supplemental Template=DatacenterCustom CongestionProvider=NewReno" "Enabled New-Reno for custom datacenter traffic"
-            Read-CommandStatus "netsh int tcp set supplemental Template=InternetCustom CongestionProvider=NewReno" "Enabled New-Reno for custom general traffic"
-        }
-        # Forcing DNS to Cloudflare's, generally faster and more secure compared to ISP's DNS - overridable by user
-        Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses ("1.1.1.1", "1.0.0.1")
-        Set-DnsClientServerAddress -InterfaceAlias $adapterName -ServerAddresses ("2606:4700:4700::1111", "2606:4700:4700::1001")
     }
 
     END {
