@@ -732,7 +732,7 @@ function Set-BCDTweaks {
 
     PROCESS {
         Write-StatusLine Info "Applying tweaks to Boot Configuration Device..."
-        Read-CommandStatus 'bcdedit /set useplatformtick yes' "enable usage of platform ticks"
+        Read-CommandStatus 'bcdedit /set useplatformtick no' "enable usage of platform ticks"
         Read-CommandStatus 'bcdedit /set disabledynamictick yes' "disable dynamic platform ticks"
         Read-CommandStatus 'bcdedit /set useplatformclock no' "disable use of platform clock-source"
         Read-CommandStatus 'bcdedit /set usefirmwarepcisettings no' "disable BIOS PCI device mapping"
@@ -740,7 +740,7 @@ function Set-BCDTweaks {
         Read-CommandStatus 'bcdedit /set MSI Default' "default all devices to Messaged-signal Interrutps" # Can potentially cause issues with some hardware configurations
         Read-CommandStatus 'bcdedit /set configaccesspolicy Default' "default memory mapping policy"
         Read-CommandStatus 'bcdedit /set x2apicpolicy Enable' "enable modern APIC policy" # x2 is the preferred usage for modern systems, see -> https://wiki.osdev.org/APIC
-        Read-CommandStatus 'bcdedit /set vm Yes' "disable virtualization"
+        Read-CommandStatus 'bcdedit /set vm no' "disable virtualization"
         Read-CommandStatus 'bcdedit /set vsmlaunchtype Off' "disable Virtual Secure Mode" 
         Read-CommandStatus 'bcdedit /deletevalue uselegacyapicmode' "disable legacy APIC methods"
         Read-CommandStatus 'bcdedit /set tscsyncpolicy Enhanced' "set TSC sync policy" # Synchonizes per-core TSC values
@@ -749,6 +749,7 @@ function Set-BCDTweaks {
         Read-CommandStatus 'bcdedit /set nx OptIn' "enable NX bit" # Used for DEP
         Read-CommandStatus 'bcdedit /set hypervisorlaunchtype off' "Disable Hypervisor" 
         Read-CommandStatus 'bcdedit /set isolatedcontext No' 'disable Hypervisor jailed memory context'
+        #Read-CommandStatus 'bcdedit /timeout 0' 'if no dual boot'
     }
     
     END {
@@ -787,20 +788,19 @@ function Set-Tweaks {
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\kbdclass\Parameters" "Status" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\lfsvc\Service\Configuration" "Status" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\GpuEnergyDrv" "Start" "DWord" "2"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Services\GpuEnergyDr" "Start" "DWord" "2"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control" "SvcHostSplitThresholdInKB" "DWord" "$($osMemory)"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control" "SvcHostSplitThresholdInKB" "DWord" "4294967295"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\kernel" "GlobalTimerResolutionRequests" "DWord" "1"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Power" "HiberbootEnabled" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager" "HeapDeCommitFreeBlockThreshold" "DWord" "262144"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\FileSystem\" "LongPathsEnabled" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\GraphicsDrivers\Scheduler" "EnablePreemption" "DWord" "1"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\GraphicsDrivers" "PlatformSupportMiracast" "DWord" "0"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Power\PowerThrottling" "PowerThrottlingOff" "DWord" "00000001"
+        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Power\PowerThrottling" "PowerThrottlingOff" "DWord" "1"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\CrashControl" "DisplayParameters" "DWord" "1"
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\AppCompat" "AITEnable" "DWord" "0"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\GraphicsDrivers" "DpiMapIommuContiguous" "DWord" "1"
         Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "DisablePagingExecutive" "DWord" "1"
-        Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "LargeSystemCache" "DWord" "1"
+        #Write-RegistryKey "HKLM:\System\CurrentControlSet\Control\Session Manager\Memory Management" "LargeSystemCache" "DWord" "1" # only for server?
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\location" "Value" "String" "Deny"
         Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\DataCollection" "AllowTelemetry" "DWord" "0"
         Write-RegistryKey "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" "ContentDeliveryAllowed" "DWord" "0"
@@ -842,7 +842,7 @@ function Set-Tweaks {
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\StorageHealth" "AllowDiskHealthModelUpdates" "DWord" "0"
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\AdvertisingInfo" "DisabledByGroupPolicy" "DWord" "1"
         Write-RegistryKey "HKLM:\Software\Policies\Microsoft\Windows\Group Policy\{35378EAC-683F-11D2-A89A-00C04FBBCFA2}" "NoBackgroundPolicy" "DWord" "1"
-        Write-RegistryKey "Software\Microsoft\Windows\CurrentVersion\Policies\System" "DisableBkGndGroupPolicy" "DWord" "1" # Prevents background group policy processing
+        Write-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System" "DisableBkGndGroupPolicy" "DWord" "1" # Prevents background group policy processing
         Remove-RegistryKey "HKLM:\Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace_41040327\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}" $false "" "Removed Gallery shortcut from explorer"
         Read-CommandStatus "fsutil behavior set disable8dot3 1" "disabled 8.3 legacy file system"
         Read-CommandStatus "fsutil behavior set disabledeletenotify 0" "forced TRIM enabled"
@@ -852,6 +852,7 @@ function Set-Tweaks {
         Read-CommandStatus "fsutil behavior set memoryusage 2" "increased pagefile size limit"
         Read-CommandStatus "fsutil behavior set disablelastaccess 1" "disabled last accessed timestamp logging"
         Read-CommandStatus "fsutil behavior set disablecompression 1" "disabled system drive compression"
+        Read-CommandStatus "fsutil behavior set symlinkevaluation R2L:0 R2R:0 L2L:1 L2R:0" "allows local-to-local symlinks, disables all remote symlink evaluations"
     }
 
     END {
